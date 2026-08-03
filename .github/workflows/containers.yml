@@ -197,21 +197,9 @@ jobs:
           subject-digest: ${{ steps.digest.outputs.value }}
           push-to-registry: true
 
-      - name: Record the released digest
-        run: |
-          node scripts/record-release.mjs \
-            --image "${REGISTRY}/${OWNER}/localmax-${{ matrix.image }}" \
-            --tag "${{ needs.version.outputs.value }}" \
-            --digest "${{ steps.digest.outputs.value }}"
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: released-${{ matrix.image }}
-          path: containers/released-images.json
-
   publish-digests:
     name: Publish released digests
-    needs: merge
+    needs: [version, merge]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -220,16 +208,34 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
-      - uses: actions/download-artifact@v4
+      - uses: docker/login-action@v3
         with:
-          path: /tmp/digests
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Until this list is non-empty every submission stays Community and unranked, so the
-      # commit is what actually turns verification on.
-      - name: Merge and commit
+      # Digests are read back from the registry rather than passed between jobs as
+      # artifacts. The registry is the authority on what was actually published, the
+      # artifact round trip was one more thing to fail — and it did — and re-running this
+      # job alone now reconciles the list from scratch.
+      #
+      # Until this list is non-empty every submission stays Community and unranked, so
+      # this commit is what actually turns verification on.
+      - name: Record and commit the released digests
         run: |
           set -euo pipefail
-          node scripts/merge-releases.mjs /tmp/digests
+          for image in base llm vision diffusion; do
+            REF="${REGISTRY}/${OWNER}/localmax-${image}:${{ needs.version.outputs.value }}"
+            DIGEST=$(docker buildx imagetools inspect "$REF" --format '{{json .Manifest.Digest}}' | tr -d '"')
+            [ -n "$DIGEST" ] || { echo "::error::no digest for $REF"; exit 1; }
+            PLATFORMS=$(docker buildx imagetools inspect "$REF" \
+              | grep -oE 'linux/(amd64|arm64)' | sort -u | paste -sd, -)
+            node scripts/record-release.mjs \
+              --image "${REGISTRY}/${OWNER}/localmax-${image}" \
+              --tag "${{ needs.version.outputs.value }}" \
+              --digest "$DIGEST" \
+              --platform "$PLATFORMS"
+          done
           git config user.name "localmax-release"
           git config user.email "release@localmax.net"
           git add containers/released-images.json

@@ -1,4 +1,26 @@
 {
   "note": "Digests of container images the project has built, signed with Cosign and released. A result is only eligible for Verified if its container digest appears here. Appended by .github/workflows/containers.yml on every release; never edited by hand.",
-  "images": []
+  "images": [
+    {
+      "image": "ghcr.io/pavel4ai/localmax-base",
+      "tag": "0.1.0",
+      "digest": "sha256:ed3255dba4b952f67938a3c99d9a70f1bafb651565f1861546e8684d487de98b",
+      "platform": "linux/amd64,linux/arm64",
+      "released_at": "2026-08-03T20:08:26.194Z"
+    },
+    {
+      "image": "ghcr.io/pavel4ai/localmax-llm",
+      "tag": "0.1.0",
+      "digest": "sha256:1fb1f022e33a2772ba23c8b4905f5c7bef3ea2a60c551069f3fc922accadd00e",
+      "platform": "linux/amd64",
+      "released_at": "2026-08-03T20:08:26.675Z"
+    },
+    {
+      "image": "ghcr.io/pavel4ai/localmax-diffusion",
+      "tag": "0.1.0",
+      "digest": "sha256:8b807837a06edf3d62d359d967984315e288697cd988913ce793adc55a846b17",
+      "platform": "linux/amd64",
+      "released_at": "2026-08-03T20:08:27.634Z"
+    }
+  ]
 }

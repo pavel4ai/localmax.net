@@ -1,5 +1,11 @@
 #!/usr/bin/env node
-/** Append a signed image digest to the released list the validator trusts. */
+/**
+ * Append a signed image digest to the released list the validator trusts.
+ *
+ * The platform list is supplied by the caller from the registry rather than assumed: an
+ * image built only for amd64 must not carry a provenance record claiming arm64, which is
+ * exactly the sort of quiet inaccuracy that makes a trust store worthless.
+ */
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -14,7 +20,7 @@ const args = Object.fromEntries(
   }, []),
 );
 
-for (const key of ["image", "tag", "digest"]) {
+for (const key of ["image", "tag", "digest", "platform"]) {
   if (!args[key]) {
     console.error(`missing --${key}`);
     process.exit(1);
@@ -28,7 +34,7 @@ if (!file.images.some((i) => i.digest === args.digest)) {
     image: args.image,
     tag: args.tag,
     digest: args.digest,
-    platform: "linux/amd64,linux/arm64",
+    platform: args.platform,
     released_at: new Date().toISOString(),
   });
 }
