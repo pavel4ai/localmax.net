@@ -30,7 +30,15 @@ const siteKey = config?.turnstile_site_key ?? "";
         <div class="widget">
           {/* The challenge id rides on a data attribute rather than an injected variable, so
               the script below is a plain static asset with nothing templated into it. */}
-          <div id="turnstile" data-sitekey={siteKey} data-challenge={challengeId}></div>
+          <div
+            id="turnstile"
+            class="cf-turnstile"
+            data-sitekey={siteKey}
+            data-challenge={challengeId}
+            data-callback="lmVerify"
+            data-error-callback="lmVerifyError"
+            data-theme="dark"
+          ></div>
           <p id="status" class="status">Loading the check…</p>
           <noscript>
             <p class="status err">
@@ -50,16 +58,19 @@ const siteKey = config?.turnstile_site_key ?? "";
   {valid && (
     <>
       {/*
-        Explicit rendering, not Turnstile's implicit mode.
+        Two independent paths to a rendered widget, because each alone has failed here:
 
-        Implicit rendering depends on the loader scanning the DOM for `.cf-turnstile` at
-        exactly the right moment; when that scan does not happen the result is an empty div
-        and no error anywhere — which is the worst possible outcome for the one interactive
-        step in the whole submission path. Rendering by hand from the loader's own `onload`
-        removes the ordering dependency, and the error/expired/timeout callbacks mean a
-        failure says so instead of showing nothing.
+        - Implicit rendering scans the DOM for `.cf-turnstile` when the script loads. The
+          markup provides everything it needs, but with `async defer` and a redirect in
+          front of the script that scan does not always happen.
+        - `?onload=` does not survive at all: api.js answers 302 to
+          /turnstile/v0/g/<hash>/api.js and the redirect drops the query string, so the
+          callback is never invoked.
 
-        The callback must exist before the loader runs, so this script precedes api.js.
+        So the script below also polls for the API to become usable and renders by hand if
+        the implicit pass did not, guarding on child nodes so the two can never both draw.
+        Note that `window.turnstile` is installed as an empty stub immediately and filled
+        in later, so the guard has to test for `render` rather than for the object.
       */}
       <script is:inline>
         (function () {
@@ -71,6 +82,12 @@ const siteKey = config?.turnstile_site_key ?? "";
             status.textContent = text;
             status.className = "status" + (kind ? " " + kind : "");
           }
+
+          // Named globals so implicit rendering can reach the same handlers.
+          window.lmVerify = submitToken;
+          window.lmVerifyError = function (code) {
+            say("Verification error " + (code || "unknown") + ". Reload to try again.", "err");
+          };
 
           async function submitToken(token) {
             say("Verifying…");
@@ -91,43 +108,53 @@ const siteKey = config?.turnstile_site_key ?? "";
             }
           }
 
-          window.onTurnstileLoad = function () {
-            if (!window.turnstile) {
-              say("The verification widget could not load. Disable any script blocker and reload.", "err");
+          function render() {
+            if (el.hasChildNodes()) return; // implicit rendering already drew it
+            say("Complete the check below.");
+            try {
+              window.turnstile.render(el, {
+                sitekey: el.dataset.sitekey,
+                theme: "dark",
+                callback: submitToken,
+                "error-callback": function (code) {
+                  say("Verification error " + (code || "unknown") + ". Reload to try again.", "err");
+                },
+                "expired-callback": function () {
+                  say("The check expired. Reload the page to try again.", "err");
+                },
+                "timeout-callback": function () {
+                  say("The check timed out. Reload the page to try again.", "err");
+                },
+              });
+            } catch (e) {
+              say("Could not start the check: " + (e && e.message ? e.message : e), "err");
+            }
+          }
+
+          // Distinguishes "the script never arrived" from "it arrived and drew nothing",
+          // because those need different fixes and a single generic message hides which.
+          var waited = 0;
+          var timer = setInterval(function () {
+            if (el.hasChildNodes()) { clearInterval(timer); say("Complete the check below."); return; }
+            if (window.turnstile && typeof window.turnstile.render === "function") {
+              clearInterval(timer);
+              render();
+              setTimeout(function () {
+                if (!el.hasChildNodes()) {
+                  say("The check loaded but drew nothing. This is a bug — please report it.", "err");
+                }
+              }, 5000);
               return;
             }
-            say("Complete the check below.");
-            window.turnstile.render(el, {
-              sitekey: el.dataset.sitekey,
-              theme: "dark",
-              callback: submitToken,
-              "error-callback": function (code) {
-                say("The verification widget reported an error (" + (code || "unknown") + "). Reload to try again.", "err");
-              },
-              "expired-callback": function () {
-                say("The check expired. Reload the page to try again.", "err");
-              },
-              "timeout-callback": function () {
-                say("The check timed out. Reload the page to try again.", "err");
-              },
-            });
-          };
-
-          // If the loader never arrives at all — blocked, offline, or a bad site key — say
-          // so rather than leaving the reader staring at a box that never appears.
-          setTimeout(function () {
-            if (!el.hasChildNodes()) {
-              say("The verification widget did not load. Disable any script blocker and reload.", "err");
+            waited += 100;
+            if (waited >= 15000) {
+              clearInterval(timer);
+              say("The verification script did not load. Disable any script blocker and reload.", "err");
             }
-          }, 10000);
+          }, 100);
         })();
       </script>
-      <script
-        is:inline
-        src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=onTurnstileLoad"
-        async
-        defer
-      ></script>
+      <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     </>
   )}
 </Layout>
