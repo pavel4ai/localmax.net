@@ -1,0 +1,99 @@
+name: Benchmark, runner or container defect
+description: A profile, container image, measurement or submission behaved wrongly.
+title: "bench: "
+labels: ["area:runner"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For anything measurement-related, the run ID and the output of
+        `localmax inspect RUN_ID` are worth more than a description — they carry the exact
+        manifest, the artifact hashes and the telemetry summary.
+
+  - type: dropdown
+    id: profile
+    attributes:
+      label: Profile
+      options:
+        - llm-entry-base
+        - llm-entry-int4
+        - llm-entry-nvfp4
+        - llm-enthusiast-base
+        - llm-enthusiast-int4
+        - llm-enthusiast-nvfp4
+        - llm-frontier-base
+        - llm-frontier-int4
+        - llm-frontier-nvfp4
+        - vision-entry-base
+        - vision-enthusiast-base
+        - vision-frontier-base
+        - diffusion-entry-base
+        - diffusion-enthusiast-base
+        - diffusion-frontier-base
+        - Not profile-specific
+    validations:
+      required: true
+
+  - type: dropdown
+    id: stage
+    attributes:
+      label: Where it went wrong
+      options:
+        - doctor — eligibility or system detection
+        - Model download or hash verification
+        - Runtime start (vLLM / diffusers)
+        - Workload execution
+        - Telemetry or power measurement
+        - Metrics — a computed value looks wrong
+        - inspect — manifest contents
+        - submit — upload or validation
+        - Container image itself
+        - Profile definition — the rules are wrong
+    validations:
+      required: true
+
+  - type: input
+    id: run_id
+    attributes:
+      label: Run ID
+      placeholder: 01KZ2MRZJY3Y3WK9ZBP36YDD09
+
+  - type: input
+    id: hardware
+    attributes:
+      label: Hardware
+      placeholder: 2× RTX PRO 6000 Blackwell, Ultra 9 285K, 128 GB
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected, and what happened
+      description: |
+        For a suspect measurement, say what value you expected and on what basis — a
+        vendor spec, another tool, or a previous run. "Lower than I thought" and "physically
+        impossible" lead to different investigations.
+    validations:
+      required: true
+
+  - type: textarea
+    id: output
+    attributes:
+      label: Command output
+      description: Output of the failing command, or `localmax inspect RUN_ID`.
+      render: shell
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Does this invalidate a published number?
+      description: |
+        A wrong measurement is far more serious than a cosmetic one, because results are
+        ranked against each other and a bad value contaminates its leaderboard.
+      options:
+        - "Yes — a published or rankable value is wrong"
+        - "No — it fails safely, or is cosmetic"
+        - "Not sure"
+    validations:
+      required: true

@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/pavel4ai/localmax.net/security/advisories/new
+    about: Report privately. Do not open a public issue.
+  - name: Methodology — why a benchmark is defined the way it is
+    url: https://localmax.net/methodology
+    about: Tier structure, quantization lanes, power domains, verification states.

@@ -1,0 +1,74 @@
+name: Website defect or change request
+description: Something on localmax.net reads wrong, looks wrong, or should work differently.
+title: "web: "
+labels: ["area:web"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A screenshot plus the URL is worth more than a paragraph of description. Attach the
+        screenshot, or paste an absolute local path if the agent is running on the same
+        machine — either works.
+
+  - type: input
+    id: url
+    attributes:
+      label: URL
+      description: The exact page, including any filter query string.
+      placeholder: https://localmax.net/benchmarks/llm-entry-base?gpu=rtx-4090
+    validations:
+      required: true
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Surface
+      options:
+        - Landing page
+        - Profile matrix (/benchmarks)
+        - Leaderboard (/benchmarks/{profile})
+        - Results list (/results)
+        - Result detail (/results/{run-id})
+        - Hardware index (/hardware)
+        - Hardware detail (/hardware/{gpu})
+        - Compare
+        - Run / Methodology / Data / Releases / Privacy
+        - Verify (submission)
+        - Navigation, footer or layout
+    validations:
+      required: true
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind
+      options:
+        - Wrong or misleading — the page states something untrue
+        - Missing — something that should be shown is not
+        - Confusing — accurate but hard to read or easy to misread
+        - Visual — layout, spacing, contrast, responsive
+        - Change request — works as built, should work differently
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected, and what you got
+      description: |
+        If a number looks wrong, say what you think it should be and why. A value that is
+        merely surprising and a value that is actually incorrect need very different fixes.
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: Screenshot
+      description: Drag an image in, or paste an absolute local path.
+
+  - type: input
+    id: env
+    attributes:
+      label: Browser and viewport
+      placeholder: Firefox 133, 2560×1440, dark theme
