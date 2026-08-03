@@ -12,6 +12,7 @@ A resumable state machine with visible stages:
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import sys
 import time
@@ -139,7 +140,7 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         return 0 if verdict.ok else 1
 
     console.print(
-        f"\nStart with: [bold]localmax run llm-entry-base[/bold]\n"
+        "\nStart with: [bold]localmax run llm-entry-base[/bold]\n"
         if runnable else "\n[red]No profile can run on this system.[/red]\n"
     )
     return 0
@@ -210,7 +211,8 @@ def cmd_run(args: argparse.Namespace) -> int:
 
     identity = load_or_create()
     started = time.perf_counter()
-    progress = lambda message: console.print(f"[dim]·[/dim] {message}")
+    def progress(message: str) -> None:
+        console.print(f"[dim]·[/dim] {message}")
 
     try:
         model_path = models.download(profile, progress)
@@ -467,10 +469,8 @@ def cmd_submit(args: argparse.Namespace) -> int:
                 title="Browser verification",
             ))
             if not args.no_browser:
-                try:
+                with contextlib.suppress(Exception):
                     webbrowser.open(url)
-                except Exception:
-                    pass
 
             with console.status("Waiting for verification…"):
                 token = client.await_token(challenge["challenge_id"])

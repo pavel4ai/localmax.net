@@ -24,6 +24,9 @@ jobs:
     name: Cloudflare
     runs-on: ubuntu-latest
     environment: production
+    # Skip cleanly rather than failing every push until the Cloudflare token is configured.
+    # A red X on main for a known-missing credential trains people to ignore red Xs.
+    if: vars.CLOUDFLARE_CONFIGURED == 'true'
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

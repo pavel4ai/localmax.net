@@ -18,11 +18,11 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from localmax_runner.adapters.base import percentile  # noqa: E402
-from localmax_runner.canonical import canonicalize, signing_payload  # noqa: E402
-from localmax_runner.identity import load_or_create  # noqa: E402
-from localmax_runner.profiles import load_all, profile_hash  # noqa: E402
-from localmax_runner.runtime import redact  # noqa: E402
+from localmax_runner.adapters.base import percentile
+from localmax_runner.canonical import canonicalize, signing_payload
+from localmax_runner.identity import load_or_create
+from localmax_runner.profiles import load_all, profile_hash
+from localmax_runner.runtime import redact
 
 ROOT = Path(__file__).resolve().parents[1]
 

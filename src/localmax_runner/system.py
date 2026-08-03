@@ -7,6 +7,7 @@ GPU serial or board UUID, no MAC address, no environment.
 
 from __future__ import annotations
 
+import contextlib
 import platform
 import re
 import shutil
@@ -211,10 +212,8 @@ def inspect(collect_gpus: bool = True) -> SystemInfo:
         virtualization=_virtualization(),
         cuda=_cuda_version(),
     )
-    try:
+    with contextlib.suppress(OSError):
         info.free_disk_bytes = shutil.disk_usage("/").free
-    except OSError:
-        pass
 
     if not collect_gpus or not _NVML:
         return info
@@ -248,18 +247,14 @@ def inspect(collect_gpus: bool = True) -> SystemInfo:
                 ("power_limit_w", pynvml.nvmlDeviceGetPowerManagementLimit, 1000.0),
                 ("power_default_limit_w", pynvml.nvmlDeviceGetPowerManagementDefaultLimit, 1000.0),
             ):
-                try:
+                with contextlib.suppress(Exception):
                     setattr(gpu, attr, round(getter(handle) / scale, 1))
-                except Exception:
-                    pass
             for attr, clock in (
                 ("graphics_clock_max_mhz", pynvml.NVML_CLOCK_GRAPHICS),
                 ("memory_clock_max_mhz", pynvml.NVML_CLOCK_MEM),
             ):
-                try:
+                with contextlib.suppress(Exception):
                     setattr(gpu, attr, int(pynvml.nvmlDeviceGetMaxClockInfo(handle, clock)))
-                except Exception:
-                    pass
             # Max, not current: NVML reports the *negotiated* link state, which drops to
             # Gen1 x8 when the GPU is idle. Recording that would make every result look
             # like it ran in a crippled slot.
@@ -267,10 +262,8 @@ def inspect(collect_gpus: bool = True) -> SystemInfo:
                 ("pcie_gen", pynvml.nvmlDeviceGetMaxPcieLinkGeneration),
                 ("pcie_width", pynvml.nvmlDeviceGetMaxPcieLinkWidth),
             ):
-                try:
+                with contextlib.suppress(Exception):
                     setattr(gpu, attr, int(getter(handle)))
-                except Exception:
-                    pass
 
             info.gpus.append(gpu)
 
@@ -283,9 +276,7 @@ def inspect(collect_gpus: bool = True) -> SystemInfo:
         ):
             info.memory_type = "unified"
     finally:
-        try:
+        with contextlib.suppress(Exception):
             pynvml.nvmlShutdown()
-        except Exception:
-            pass
 
     return info

@@ -8,6 +8,7 @@ produce a number that no longer belongs to the profile.
 
 from __future__ import annotations
 
+import contextlib
 import os
 import re
 import shutil
@@ -20,7 +21,7 @@ from typing import Any
 import httpx
 
 
-class RuntimeError_(Exception):
+class RuntimeStartError(Exception):
     """Runtime failed to start or serve."""
 
 
@@ -70,7 +71,7 @@ class VllmServer:
 
     def command(self) -> list[str]:
         if not shutil.which("vllm"):
-            raise RuntimeError_(
+            raise RuntimeStartError(
                 "vllm is not installed. Use the official localmax-llm container, which pins "
                 "the exact version the profile requires."
             )
@@ -115,7 +116,7 @@ class VllmServer:
         with httpx.Client(timeout=5.0) as client:
             while time.monotonic() < deadline:
                 if self._process and self._process.poll() is not None:
-                    raise RuntimeError_(
+                    raise RuntimeStartError(
                         f"The runtime exited with code {self._process.returncode} before it "
                         f"began serving. The captured log is in the run directory."
                     )
@@ -127,7 +128,7 @@ class VllmServer:
                 except httpx.HTTPError:
                     pass
                 time.sleep(2.0)
-        raise RuntimeError_(
+        raise RuntimeStartError(
             f"The runtime did not become ready within {self.ready_timeout_s}s. On a "
             "minimum-VRAM system this usually means the model did not fit."
         )
@@ -138,18 +139,14 @@ class VllmServer:
                 os.killpg(os.getpgid(self._process.pid), signal.SIGTERM)
                 self._process.wait(timeout=45)
             except Exception:
-                try:
+                with contextlib.suppress(Exception):
                     os.killpg(os.getpgid(self._process.pid), signal.SIGKILL)
-                except Exception:
-                    pass
         if self._log:
             self._log.close()
             self._log = None
         # Redact in place: the log is about to become public evidence.
-        try:
+        with contextlib.suppress(OSError):
             self.log_path.write_text(redact(self.log_path.read_text(errors="replace")))
-        except OSError:
-            pass
 
     def version(self) -> str:
         try:

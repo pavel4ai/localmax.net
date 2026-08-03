@@ -26,6 +26,8 @@ try:
 except Exception:  # pragma: no cover
     _NVML = False
 
+import contextlib
+
 import psutil
 
 
@@ -116,10 +118,8 @@ class TelemetrySampler:
                 sample: dict[str, Any] = {"t": round(tick - self._started_at, 4), "gpus": []}
                 for handle in handles:
                     entry: dict[str, Any] = {}
-                    try:
+                    with contextlib.suppress(Exception):
                         entry["power_w"] = pynvml.nvmlDeviceGetPowerUsage(handle) / 1000.0
-                    except Exception:
-                        pass
                     try:
                         memory = pynvml.nvmlDeviceGetMemoryInfo(handle)
                         entry["vram_used_bytes"] = int(memory.used)
@@ -130,12 +130,10 @@ class TelemetrySampler:
                         entry["util_pct"] = int(rates.gpu)
                     except Exception:
                         pass
-                    try:
+                    with contextlib.suppress(Exception):
                         entry["temp_c"] = int(
                             pynvml.nvmlDeviceGetTemperature(handle, pynvml.NVML_TEMPERATURE_GPU)
                         )
-                    except Exception:
-                        pass
                     try:
                         reasons = pynvml.nvmlDeviceGetCurrentClocksThrottleReasons(handle)
                         entry["throttle"] = int(reasons)
@@ -149,10 +147,8 @@ class TelemetrySampler:
                 elapsed = time.monotonic() - tick
                 self._stop.wait(max(0.0, self.interval_s - elapsed))
         finally:
-            try:
+            with contextlib.suppress(Exception):
                 pynvml.nvmlShutdown()
-            except Exception:
-                pass
 
     def _write(self) -> None:
         self.output.parent.mkdir(parents=True, exist_ok=True)
@@ -201,9 +197,7 @@ class TelemetrySampler:
                     summary.temperature_peak_c = max(summary.temperature_peak_c or 0.0, float(g["temp_c"]))
                 reasons = g.get("throttle", 0)
                 # NVML clock-throttle reason bitmask.
-                if reasons & 0x0000000000000040:  # SW_THERMAL_SLOWDOWN
-                    summary.throttle["thermal_count"] += 1
-                elif reasons & 0x0000000000000080:  # HW_THERMAL_SLOWDOWN
+                if reasons & 0x0000000000000040 or reasons & 0x0000000000000080:  # SW_THERMAL_SLOWDOWN
                     summary.throttle["thermal_count"] += 1
                 if reasons & 0x0000000000000004:  # SW_POWER_CAP
                     summary.throttle["power_count"] += 1

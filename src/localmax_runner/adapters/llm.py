@@ -46,11 +46,13 @@ def _prompt(input_tokens: int, seed: int) -> str:
     import random
 
     rng = random.Random(seed)
-    vocabulary = (
-        "system memory bandwidth latency throughput kernel tensor matrix vector cache "
-        "pipeline scheduler token context window inference model weight gradient batch "
-        "quantization precision compute device driver runtime allocation buffer stream"
-    ).split()
+    vocabulary = [
+        "system", "memory", "bandwidth", "latency", "throughput", "kernel", "tensor",
+        "matrix", "vector", "cache", "pipeline", "scheduler", "token", "context",
+        "window", "inference", "model", "weight", "gradient", "batch", "quantization",
+        "precision", "compute", "device", "driver", "runtime", "allocation", "buffer",
+        "stream",
+    ]
     words = [rng.choice(vocabulary) for _ in range(int(input_tokens * 1.33))]
     return " ".join(words)
 
