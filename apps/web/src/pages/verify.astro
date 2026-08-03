@@ -31,9 +31,16 @@ const siteKey = config?.turnstile_site_key ?? "";
           {/*
             Canonical implicit-render markup. The challenge id rides on a data attribute so
             the script stays static with nothing templated into it.
+
+            Every id here is namespaced, and that is load-bearing rather than tidiness.
+            Browsers expose each element id as a global, so `id="turnstile"` made
+            `window.turnstile` the div itself. The loader's guard is `"turnstile" in window`,
+            so it concluded the API was already present, logged "Turnstile already has been
+            loaded" and returned without installing it — leaving an object with no render
+            method and a widget that never appeared, on any browser, deterministically.
           */}
           <div
-            id="turnstile"
+            id="lm-turnstile"
             class="cf-turnstile"
             data-sitekey={siteKey}
             data-challenge={challengeId}
@@ -42,8 +49,8 @@ const siteKey = config?.turnstile_site_key ?? "";
             data-error-callback="lmVerifyError"
             data-theme="dark"
           ></div>
-          <p id="status" class="status">Loading the check…</p>
-          <p id="diag" class="diag"></p>
+          <p id="lm-status" class="status">Loading the check…</p>
+          <p id="lm-diag" class="diag"></p>
           <noscript>
             <p class="status err">
               This step needs JavaScript. It is the only page on the site that does.
@@ -62,9 +69,9 @@ const siteKey = config?.turnstile_site_key ?? "";
   {valid && (
     <script is:inline>
       (function () {
-        var el = document.getElementById("turnstile");
-        var statusEl = document.getElementById("status");
-        var diagEl = document.getElementById("diag");
+        var el = document.getElementById("lm-turnstile");
+        var statusEl = document.getElementById("lm-status");
+        var diagEl = document.getElementById("lm-diag");
         var challengeId = el.dataset.challenge;
         var t0 = Date.now();
         var scriptLoaded = null; // null = pending, true = onload, false = onerror
