@@ -8,6 +8,10 @@ on:
       version:
         description: "Release version, e.g. 0.1.0"
         required: true
+      arm64_runtimes:
+        description: "Also build llm/diffusion for arm64 (unvalidated on GB10)"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -20,61 +24,81 @@ env:
   OWNER: pavel4ai
 
 jobs:
-  base:
-    name: Base image
+  # Each architecture builds on its own native runner and pushes a digest-only image;
+  # a final job merges them into one manifest list. QEMU emulation was the alternative and
+  # is not viable here: emulating a torch or vLLM build takes hours and frequently exhausts
+  # the runner, which is precisely why arm64 support tends to get dropped.
+  version:
     runs-on: ubuntu-latest
     outputs:
-      digest: ${{ steps.build.outputs.digest }}
-      version: ${{ steps.version.outputs.value }}
+      value: ${{ steps.v.outputs.value }}
+    steps:
+      - id: v
+        run: echo "value=$(echo '${{ github.event.inputs.version || github.ref_name }}' | tr -d v)" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: ${{ matrix.image }} (${{ matrix.arch }})
+    needs: version
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # The base image is proven on both architectures. The runtime images pull vLLM and
+        # torch, whose aarch64 CUDA support is the open item in the bake-off, so arm64 for
+        # those is opt-in rather than default: publishing a manifest that resolves on a DGX
+        # Spark to an image that cannot serve would be worse than not publishing one.
+        include:
+          - { image: base, arch: amd64, runner: ubuntu-latest, dockerfile: containers/base.Dockerfile }
+          - { image: base, arch: arm64, runner: ubuntu-24.04-arm, dockerfile: containers/base.Dockerfile }
+          - { image: llm, arch: amd64, runner: ubuntu-latest, dockerfile: containers/llm.Dockerfile }
+          - { image: diffusion, arch: amd64, runner: ubuntu-latest, dockerfile: containers/diffusion.Dockerfile }
     steps:
       - uses: actions/checkout@v4
-      - id: version
-        run: echo "value=${{ github.event.inputs.version || github.ref_name }}" | tr -d 'v' >> "$GITHUB_OUTPUT"
-      - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      # The base image must exist before the runtime images can extend it, so a per-arch
+      # tag is pushed first and consumed by name below.
+      - name: Free disk space
+        if: matrix.image != 'base'
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
+
       - id: build
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: containers/base.Dockerfile
-          # arm64 is built from the first release: DGX Spark is GB10/aarch64, and adding it
-          # later would mean re-signing the whole image line.
-          platforms: linux/amd64,linux/arm64
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/${{ matrix.arch }}
           push: true
           provenance: mode=max
           sbom: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.OWNER }}/localmax-base:${{ steps.version.outputs.value }}
-            ${{ env.REGISTRY }}/${{ env.OWNER }}/localmax-base:latest
-          build-args: LOCALMAX_VERSION=${{ steps.version.outputs.value }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          tags: ${{ env.REGISTRY }}/${{ env.OWNER }}/localmax-${{ matrix.image }}:${{ needs.version.outputs.value }}-${{ matrix.arch }}
+          build-args: |
+            LOCALMAX_VERSION=${{ needs.version.outputs.value }}
+            BASE_IMAGE=${{ env.REGISTRY }}/${{ env.OWNER }}/localmax-base:${{ needs.version.outputs.value }}-${{ matrix.arch }}
+          cache-from: type=gha,scope=${{ matrix.image }}-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}-${{ matrix.arch }}
 
-  images:
-    name: ${{ matrix.image }}
-    needs: base
+  merge:
+    name: Manifest — ${{ matrix.image }}
+    needs: [version, build]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - image: llm
-            dockerfile: containers/llm.Dockerfile
-          - image: vision
-            dockerfile: containers/llm.Dockerfile
-          - image: diffusion
-            dockerfile: containers/diffusion.Dockerfile
+        image: [base, llm, vision, diffusion]
     outputs:
-      digest: ${{ steps.build.outputs.digest }}
+      digest: ${{ steps.digest.outputs.value }}
     steps:
       - uses: actions/checkout@v4
-      - uses: docker/setup-qemu-action@v3
-      - uses: docker/setup-buildx-action@v3
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
       - uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
@@ -82,42 +106,61 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - uses: sigstore/cosign-installer@v3
 
-      - id: build
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ${{ matrix.dockerfile }}
-          platforms: linux/amd64,linux/arm64
-          push: true
-          provenance: mode=max
-          sbom: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.OWNER }}/localmax-${{ matrix.image }}:${{ needs.base.outputs.version }}
-            ${{ env.REGISTRY }}/${{ env.OWNER }}/localmax-${{ matrix.image }}:latest
-          build-args: |
-            BASE_IMAGE=${{ env.REGISTRY }}/${{ env.OWNER }}/localmax-base:${{ needs.base.outputs.version }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+      # Vision and LLM share one image; the vision tag is an alias, not a rebuild.
+      - name: Merge per-architecture images into one manifest list
+        env:
+          V: ${{ needs.version.outputs.value }}
+          SRC: ${{ matrix.image == 'vision' && 'llm' || matrix.image }}
+        run: |
+          set -euo pipefail
+          REF="${REGISTRY}/${OWNER}/localmax-${{ matrix.image }}"
+          SRC_REF="${REGISTRY}/${OWNER}/localmax-${SRC}"
+
+          # Include only the architectures that actually built. A manifest listing an
+          # arm64 entry that does not exist resolves to a pull failure on the one platform
+          # least able to diagnose it.
+          SOURCES=""
+          for arch in amd64 arm64; do
+            if docker buildx imagetools inspect "${SRC_REF}:${V}-${arch}" >/dev/null 2>&1; then
+              SOURCES="${SOURCES} ${SRC_REF}:${V}-${arch}"
+              echo "including ${arch}"
+            else
+              echo "::notice::${SRC} has no ${arch} build; omitting it from the manifest"
+            fi
+          done
+          [ -n "$SOURCES" ] || { echo "::error::no architectures built for ${SRC}"; exit 1; }
+
+          for tag in "$V" latest; do
+            docker buildx imagetools create -t "${REF}:${tag}" $SOURCES
+          done
+
+      - id: digest
+        run: |
+          DIGEST=$(docker buildx imagetools inspect \
+            "${REGISTRY}/${OWNER}/localmax-${{ matrix.image }}:${{ needs.version.outputs.value }}" \
+            --format '{{json .Manifest.Digest}}' | tr -d '"')
+          echo "value=$DIGEST" >> "$GITHUB_OUTPUT"
+          echo "digest=$DIGEST"
 
       # Keyless signing. A result reaches Verified only if its recorded digest is one the
       # project actually published, so this signature is what that check rests on.
       - name: Sign
         run: |
           cosign sign --yes \
-            "${REGISTRY}/${OWNER}/localmax-${{ matrix.image }}@${{ steps.build.outputs.digest }}"
+            "${REGISTRY}/${OWNER}/localmax-${{ matrix.image }}@${{ steps.digest.outputs.value }}"
 
       - uses: actions/attest-build-provenance@v2
         with:
           subject-name: ${{ env.REGISTRY }}/${{ env.OWNER }}/localmax-${{ matrix.image }}
-          subject-digest: ${{ steps.build.outputs.digest }}
+          subject-digest: ${{ steps.digest.outputs.value }}
           push-to-registry: true
 
       - name: Record the released digest
         run: |
           node scripts/record-release.mjs \
             --image "${REGISTRY}/${OWNER}/localmax-${{ matrix.image }}" \
-            --tag "${{ needs.base.outputs.version }}" \
-            --digest "${{ steps.build.outputs.digest }}"
+            --tag "${{ needs.version.outputs.value }}" \
+            --digest "${{ steps.digest.outputs.value }}"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -126,17 +169,24 @@ jobs:
 
   publish-digests:
     name: Publish released digests
-    needs: images
+    needs: merge
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
       - uses: actions/download-artifact@v4
         with:
           path: /tmp/digests
-      - uses: actions/setup-node@v4
-        with: { node-version: 22 }
+
+      # Until this list is non-empty every submission stays Community and unranked, so the
+      # commit is what actually turns verification on.
       - name: Merge and commit
         run: |
+          set -euo pipefail
           node scripts/merge-releases.mjs /tmp/digests
           git config user.name "localmax-release"
           git config user.email "release@localmax.net"

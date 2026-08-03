@@ -44,9 +44,9 @@
   },
   "runtime": {
     "name": "vllm",
-    "version": "PENDING",
+    "version": "0.26.0",
     "harness": "aiperf",
-    "harness_version": "PENDING",
+    "harness_version": "0.7.0",
     "server_ready_timeout_s": 900,
     "flags": {
       "dtype": "bfloat16",
@@ -269,7 +269,7 @@
     }
   },
   "notes": [
-    "Release candidate. Model revision, vLLM version and AIPerf commit are PENDING until the bake-off.",
+    "Release candidate. The runtime and harness versions are pinned; the model revision is not frozen until the bake-off confirms fit on the tier's minimum-VRAM reference system, so this leaderboard is provisional.",
     "Headline is images per minute at concurrency 2, which is what a reader actually wants to know.",
     "Quality is a gate, not a score. OCR, chart and document tasks have deterministic expected answers; description and reasoning are collected but never scored until a stable evaluator exists.",
     "Image encode time is separated from prompt prefill so the vision tower cost is visible."

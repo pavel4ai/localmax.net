@@ -178,6 +178,26 @@ def _container_runtime() -> str | None:
 
 
 def _cuda_version() -> str:
+    """The CUDA version the *driver* supports.
+
+    Read from NVML rather than by shelling out to nvcc: a runtime container has no
+    compiler, so the nvcc path reports "unknown" exactly where it matters most — inside the
+    official image. The driver's version is also the one that governs what the inference
+    runtime can do, which is what makes a result comparable.
+    """
+    if _NVML:
+        try:
+            pynvml.nvmlInit()
+            try:
+                raw = pynvml.nvmlSystemGetCudaDriverVersion_v2()
+            except Exception:
+                raw = pynvml.nvmlSystemGetCudaDriverVersion()
+            pynvml.nvmlShutdown()
+            return f"{raw // 1000}.{(raw % 1000) // 10}"
+        except Exception:
+            with contextlib.suppress(Exception):
+                pynvml.nvmlShutdown()
+
     if shutil.which("nvcc"):
         try:
             out = subprocess.run(["nvcc", "--version"], capture_output=True, text=True, timeout=10)

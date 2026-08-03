@@ -42,9 +42,9 @@
   },
   "runtime": {
     "name": "vllm",
-    "version": "PENDING",
+    "version": "0.26.0",
     "harness": "aiperf",
-    "harness_version": "PENDING",
+    "harness_version": "0.7.0",
     "server_ready_timeout_s": 900,
     "flags": {
       "dtype": "bfloat16",
@@ -235,7 +235,7 @@
     }
   },
   "notes": [
-    "Release candidate. Model revision, vLLM version and AIPerf commit are PENDING until the bake-off.",
+    "Release candidate. The runtime and harness versions are pinned; the model revision is not frozen until the bake-off confirms fit on the tier's minimum-VRAM reference system, so this leaderboard is provisional.",
     "A 32B at BF16 is roughly 64 GB, which fits both a DGX Spark and a 2x96 GB workstation. A 70B BF16 baseline was rejected because it would exclude DGX Spark from its own tier.",
     "Both 1 and 2 GPU results are accepted, ranked separately. Tensor parallelism is recorded as a comparability key.",
     "RTX PRO 6000 Blackwell has no NVLink, so a 2-GPU result there communicates over PCIe. PCIe generation and width are recorded and shown on the result page."

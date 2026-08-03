@@ -5,25 +5,34 @@
   "version": "0.1.0",
   "frozen": false,
   "published": false,
-  "display_name": "LLM · Entry · BF16",
+  "display_name": "LLM \u00b7 Entry \u00b7 BF16",
   "summary": "A 4B-class model at BF16 on 12 GB. The universal baseline: every supported NVIDIA GPU from an RTX 3060 12 GB upward runs this identically, so it is the one leaderboard that spans the whole hardware range.",
   "category": "llm",
   "tier": "entry",
   "lane": "base",
-
   "requirements": {
     "min_vram_bytes": 12884901888,
     "min_system_ram_bytes": 17179869184,
     "min_disk_bytes": 32212254720,
     "min_driver": "550.54",
     "min_compute_capability": "8.0",
-    "architectures": ["ampere", "ada", "blackwell", "blackwell-gb10", "hopper"],
-    "platforms": ["linux/amd64", "linux/arm64"],
-    "gpu_count": [1],
+    "architectures": [
+      "ampere",
+      "ada",
+      "blackwell",
+      "blackwell-gb10",
+      "hopper"
+    ],
+    "platforms": [
+      "linux/amd64",
+      "linux/arm64"
+    ],
+    "gpu_count": [
+      1
+    ],
     "expected_runtime_minutes": 14,
     "expected_download_bytes": 8589934592
   },
-
   "model": {
     "repository": "Qwen/Qwen3-4B-Instruct",
     "revision": "PENDING",
@@ -33,12 +42,11 @@
     "license": "Apache-2.0",
     "files": []
   },
-
   "runtime": {
     "name": "vllm",
-    "version": "PENDING",
+    "version": "0.26.0",
     "harness": "aiperf",
-    "harness_version": "PENDING",
+    "harness_version": "0.7.0",
     "server_ready_timeout_s": 900,
     "flags": {
       "dtype": "bfloat16",
@@ -52,7 +60,6 @@
     },
     "flag_overrides_allowed": []
   },
-
   "workloads": [
     {
       "id": "interactive",
@@ -82,7 +89,12 @@
       "config": {
         "input_tokens": 1024,
         "output_tokens": 256,
-        "concurrency_sweep": [1, 2, 4, 8],
+        "concurrency_sweep": [
+          1,
+          2,
+          4,
+          8
+        ],
         "input_source": "fixed_synthetic",
         "input_seed": 20260801,
         "temperature": 0,
@@ -110,45 +122,122 @@
       }
     }
   ],
-
   "ranking": {
     "metric": "decode_throughput_tok_s",
     "unit": "tok/s",
     "direction": "higher_is_better",
     "source_workload": "interactive",
     "secondary": [
-      { "metric": "prefill_throughput_tok_s", "label": "Prefill", "unit": "tok/s", "direction": "higher_is_better", "source_workload": "interactive" },
-      { "metric": "ttft_p50_ms", "label": "TTFT p50", "unit": "ms", "direction": "lower_is_better", "source_workload": "interactive" },
-      { "metric": "ttft_p95_ms", "label": "TTFT p95", "unit": "ms", "direction": "lower_is_better", "source_workload": "interactive" },
-      { "metric": "itl_p95_ms", "label": "Inter-token p95", "unit": "ms", "direction": "lower_is_better", "source_workload": "interactive" },
-      { "metric": "peak_output_throughput_tok_s", "label": "Peak throughput @c8", "unit": "tok/s", "direction": "higher_is_better", "source_workload": "concurrency" },
-      { "metric": "energy_per_output_token_j", "label": "Energy / token", "unit": "J", "direction": "lower_is_better", "source_workload": "interactive" },
-      { "metric": "model_load_s", "label": "Model load", "unit": "s", "direction": "lower_is_better", "source_workload": "interactive" }
+      {
+        "metric": "prefill_throughput_tok_s",
+        "label": "Prefill",
+        "unit": "tok/s",
+        "direction": "higher_is_better",
+        "source_workload": "interactive"
+      },
+      {
+        "metric": "ttft_p50_ms",
+        "label": "TTFT p50",
+        "unit": "ms",
+        "direction": "lower_is_better",
+        "source_workload": "interactive"
+      },
+      {
+        "metric": "ttft_p95_ms",
+        "label": "TTFT p95",
+        "unit": "ms",
+        "direction": "lower_is_better",
+        "source_workload": "interactive"
+      },
+      {
+        "metric": "itl_p95_ms",
+        "label": "Inter-token p95",
+        "unit": "ms",
+        "direction": "lower_is_better",
+        "source_workload": "interactive"
+      },
+      {
+        "metric": "peak_output_throughput_tok_s",
+        "label": "Peak throughput @c8",
+        "unit": "tok/s",
+        "direction": "higher_is_better",
+        "source_workload": "concurrency"
+      },
+      {
+        "metric": "energy_per_output_token_j",
+        "label": "Energy / token",
+        "unit": "J",
+        "direction": "lower_is_better",
+        "source_workload": "interactive"
+      },
+      {
+        "metric": "model_load_s",
+        "label": "Model load",
+        "unit": "s",
+        "direction": "lower_is_better",
+        "source_workload": "interactive"
+      }
     ],
     "gates": [
-      { "metric": "ttft_p95_ms", "comparator": "lte", "value": 3000, "source_workload": "interactive", "reason": "A result that cannot answer within 3 s at concurrency 1 is not an interactive system." },
-      { "metric": "itl_p95_ms", "comparator": "lte", "value": 200, "source_workload": "interactive", "reason": "Below roughly 5 tok/s the experience is not usable; such a run is published but not ranked." },
-      { "metric": "error_ratio", "comparator": "lte", "value": 0.0, "source_workload": "interactive", "reason": "Any failed request invalidates the measurement." }
+      {
+        "metric": "ttft_p95_ms",
+        "comparator": "lte",
+        "value": 3000,
+        "source_workload": "interactive",
+        "reason": "A result that cannot answer within 3 s at concurrency 1 is not an interactive system."
+      },
+      {
+        "metric": "itl_p95_ms",
+        "comparator": "lte",
+        "value": 200,
+        "source_workload": "interactive",
+        "reason": "Below roughly 5 tok/s the experience is not usable; such a run is published but not ranked."
+      },
+      {
+        "metric": "error_ratio",
+        "comparator": "lte",
+        "value": 0.0,
+        "source_workload": "interactive",
+        "reason": "Any failed request invalidates the measurement."
+      }
     ]
   },
-
   "validation": {
-    "required_artifacts": ["raw_records", "telemetry", "system_report", "runtime_log"],
+    "required_artifacts": [
+      "raw_records",
+      "telemetry",
+      "system_report",
+      "runtime_log"
+    ],
     "telemetry_interval_ms": 100,
     "min_telemetry_coverage_pct": 99.0,
     "metric_recompute_tolerance_pct": 0.5,
     "max_repeat_cv_pct": 3.0,
     "plausibility": {
-      "decode_throughput_tok_s": { "min": 0.5, "max": 5000 },
-      "prefill_throughput_tok_s": { "min": 1, "max": 500000 },
-      "ttft_p50_ms": { "min": 1, "max": 120000 },
-      "vram_peak_bytes": { "min": 1073741824, "max": 206158430208 },
-      "power_avg_w": { "min": 5, "max": 1200 }
+      "decode_throughput_tok_s": {
+        "min": 0.5,
+        "max": 5000
+      },
+      "prefill_throughput_tok_s": {
+        "min": 1,
+        "max": 500000
+      },
+      "ttft_p50_ms": {
+        "min": 1,
+        "max": 120000
+      },
+      "vram_peak_bytes": {
+        "min": 1073741824,
+        "max": 206158430208
+      },
+      "power_avg_w": {
+        "min": 5,
+        "max": 1200
+      }
     }
   },
-
   "notes": [
-    "Release candidate. The model revision, vLLM version and AIPerf commit are PENDING until the bake-off confirms fit on the 12 GB reference system.",
+    "Release candidate. The runtime and harness versions are pinned; the model revision is not frozen until the bake-off confirms fit on the tier's minimum-VRAM reference system, so this leaderboard is provisional.",
     "gpu-memory-utilization is 0.9 rather than the usual 0.95 because a 12 GB card frequently drives a display. If the bake-off shows 0.9 still fails with a desktop session attached, max-model-len drops before the utilisation does.",
     "Decode and prefill throughput are reported separately. Decode tracks memory bandwidth; prefill tracks compute. Reporting only TTFT would hide the difference between a DGX Spark and an RTX 4090.",
     "Only single-GPU results are accepted at Entry tier. A multi-GPU system may run this profile, but the runner pins it to one device."

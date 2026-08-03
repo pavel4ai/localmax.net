@@ -16,8 +16,8 @@ FROM ${BASE_IMAGE} AS runtime
 USER root
 
 ARG TARGETARCH
-ARG VLLM_VERSION=0.8.5
-ARG AIPERF_REF=main
+ARG VLLM_VERSION=0.26.0
+ARG AIPERF_VERSION=0.7.0
 
 # The exact versions the profile pins. Recorded in every manifest and checked on submission.
 ENV LOCALMAX_RUNTIME=vllm \
@@ -25,21 +25,21 @@ ENV LOCALMAX_RUNTIME=vllm \
 
 RUN --mount=type=cache,target=/root/.cache/pip \
     set -eux; \
-    if [ "${TARGETARCH}" = "amd64" ]; then \
-        pip install --no-cache-dir "vllm==${VLLM_VERSION}"; \
-    else \
+    if [ "${TARGETARCH}" != "amd64" ]; then \
         apt-get update && apt-get install -y --no-install-recommends \
             build-essential cmake ninja-build python3-dev && \
-        rm -rf /var/lib/apt/lists/* && \
-        pip install --no-cache-dir "vllm==${VLLM_VERSION}" \
-          || echo "vLLM aarch64 wheel unavailable; the arm64 image is a release candidate."; \
-    fi
+        rm -rf /var/lib/apt/lists/*; \
+    fi; \
+    pip install --no-cache-dir "vllm==${VLLM_VERSION}"
 
 # NVIDIA AIPerf: the pinned request generator and metric engine for LLM and Vision.
+# Not optional in a released image. The runner has a built-in generator so a source
+# checkout still works, but a result produced that way records harness=builtin and is
+# never eligible for Verified — so an official image that quietly lacked AIPerf would
+# publish unrankable results with no indication why. Pinned to a release, not a git ref:
+# a load generator that can change under the benchmark is not a pinned benchmark.
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install --no-cache-dir "git+https://github.com/ai-dynamo/aiperf@${AIPERF_REF}" \
-    || echo "AIPerf unavailable at ${AIPERF_REF}; the runner falls back to its built-in \
-generator and records harness=builtin, which is not eligible for Verified."
+    pip install --no-cache-dir "aiperf==${AIPERF_VERSION}"
 
 USER localmax
 

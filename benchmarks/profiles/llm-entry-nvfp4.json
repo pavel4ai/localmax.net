@@ -41,9 +41,9 @@
   },
   "runtime": {
     "name": "vllm",
-    "version": "PENDING",
+    "version": "0.26.0",
     "harness": "aiperf",
-    "harness_version": "PENDING",
+    "harness_version": "0.7.0",
     "server_ready_timeout_s": 900,
     "flags": {
       "dtype": "bfloat16",
@@ -234,7 +234,7 @@
     }
   },
   "notes": [
-    "Release candidate. Model revision, vLLM version and AIPerf commit are PENDING until the bake-off.",
+    "Release candidate. The runtime and harness versions are pinned; the model revision is not frozen until the bake-off confirms fit on the tier's minimum-VRAM reference system, so this leaderboard is provisional.",
     "Decode and prefill throughput are reported separately: decode tracks memory bandwidth, prefill tracks compute.",
     "NVFP4 lane. Ranked only against other NVFP4 results, because comparing precisions would compare different numerical workloads."
   ]

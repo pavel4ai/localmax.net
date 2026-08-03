@@ -12,22 +12,16 @@ FROM ${BASE_IMAGE} AS runtime
 USER root
 
 ARG TARGETARCH
-ARG TORCH_VERSION=2.6.0
-ARG DIFFUSERS_VERSION=0.32.2
-ARG CUDA_CHANNEL=cu126
+ARG TORCH_VERSION=2.9.1
+ARG DIFFUSERS_VERSION=0.39.0
 
 ENV LOCALMAX_RUNTIME=diffusers \
     LOCALMAX_RUNTIME_VERSION=${DIFFUSERS_VERSION}
 
+# Recent torch releases ship CUDA-enabled manylinux wheels on the default index for both
+# architectures, so no separate PyTorch channel is needed.
 RUN --mount=type=cache,target=/root/.cache/pip \
-    set -eux; \
-    if [ "${TARGETARCH}" = "amd64" ]; then \
-        pip install --no-cache-dir --index-url "https://download.pytorch.org/whl/${CUDA_CHANNEL}" \
-            "torch==${TORCH_VERSION}"; \
-    else \
-        # aarch64 CUDA wheels come from the default index on recent releases.
-        pip install --no-cache-dir "torch==${TORCH_VERSION}"; \
-    fi
+    pip install --no-cache-dir "torch==${TORCH_VERSION}"
 
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install --no-cache-dir \
