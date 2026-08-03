@@ -123,8 +123,6 @@ jobs:
       fail-fast: false
       matrix:
         image: [base, llm, vision, diffusion]
-    outputs:
-      digest: ${{ steps.digest.outputs.value }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -174,10 +172,24 @@ jobs:
 
       # Keyless signing. A result reaches Verified only if its recorded digest is one the
       # project actually published, so this signature is what that check rests on.
+      #
+      # Retried because Rekor intermittently returns 404 reading back an entry it has just
+      # written. The signature is real; only the immediate verification read races. Failing
+      # the release on that would block every Verified result on a transparency-log hiccup.
       - name: Sign
         run: |
-          cosign sign --yes \
-            "${REGISTRY}/${OWNER}/localmax-${{ matrix.image }}@${{ steps.digest.outputs.value }}"
+          set -euo pipefail
+          REF="${REGISTRY}/${OWNER}/localmax-${{ matrix.image }}@${{ steps.digest.outputs.value }}"
+          for attempt in 1 2 3 4 5; do
+            if cosign sign --yes "$REF"; then
+              echo "signed on attempt $attempt"
+              exit 0
+            fi
+            echo "::warning::cosign attempt $attempt failed; retrying"
+            sleep $((attempt * 20))
+          done
+          echo "::error::cosign failed after 5 attempts"
+          exit 1
 
       - uses: actions/attest-build-provenance@v2
         with:
