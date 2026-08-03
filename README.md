@@ -78,13 +78,15 @@ docs/                   Architecture, methodology, operations
 
 ## Deploy
 
-The Cloudflare API token in `.cloudflare` is zone-scoped only and cannot deploy anything.
-[`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) lists the exact permissions to add, then:
+Live at [localmax.net](https://localmax.net). Provisioning is idempotent, so this both
+creates a fresh environment and reconciles an existing one:
 
 ```bash
-source .cloudflare && export CLOUDFLARE_API_TOKEN="$CLOUDFLARE_ACCOUNT_TOKEN"
-./scripts/provision-cloudflare.sh
+source .cloudflare && ./scripts/provision-cloudflare.sh
 ```
+
+The token must be account-scoped; [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) lists the exact
+permissions and what gets created.
 
 ## Development
 

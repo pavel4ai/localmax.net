@@ -34,9 +34,11 @@ info "Checking token permissions"
 missing=0
 check() {
   local label="$1" path="$2"
+  # The API pretty-prints its responses, so the check has to tolerate whitespace after
+  # the colon. Matching '"success":true' silently reports every permission as denied.
   if curl -fsS "https://api.cloudflare.com/client/v4${path}" \
        -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
-       | grep -q '"success":true'; then
+       | grep -qE '"success":[[:space:]]*true'; then
     ok "$label"
   else
     warn "$label — DENIED"
@@ -72,12 +74,23 @@ fi
 
 # --- 1. D1 -----------------------------------------------------------------
 
+# Resource IDs are read back from the REST API rather than parsed out of CLI output:
+# `wrangler d1 info` needs a valid database_id in the config to work at all, which is
+# exactly what we are trying to discover, and its human output is not stable to parse.
+cf_api() {
+  curl -fsS "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}$1" \
+    -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
+}
+
 info "Creating the D1 database"
-if ! $WRANGLER d1 info localmax --config "$API_CONFIG" >/dev/null 2>&1; then
-  $WRANGLER d1 create localmax
+DB_ID=$(cf_api "/d1/database?name=localmax" \
+        | python3 -c 'import sys,json;print(next((d["uuid"] for d in json.load(sys.stdin)["result"] if d["name"]=="localmax"),""))')
+if [ -z "$DB_ID" ]; then
+  $WRANGLER d1 create localmax >/dev/null
+  DB_ID=$(cf_api "/d1/database?name=localmax" \
+          | python3 -c 'import sys,json;print(next((d["uuid"] for d in json.load(sys.stdin)["result"] if d["name"]=="localmax"),""))')
 fi
-DB_ID=$($WRANGLER d1 info localmax --json --config "$API_CONFIG" 2>/dev/null \
-        | python3 -c 'import sys,json; print(json.load(sys.stdin)["uuid"])')
+[ -n "$DB_ID" ] || { echo "Could not resolve the D1 database id" >&2; exit 1; }
 ok "D1 localmax = $DB_ID"
 
 # --- 2. R2 -----------------------------------------------------------------
@@ -92,11 +105,14 @@ ok "R2 localmax-evidence"
 # --- 3. KV -----------------------------------------------------------------
 
 info "Creating the KV namespace for sessions and nonces"
-KV_ID=$($WRANGLER kv namespace create SESSIONS 2>&1 \
-        | grep -oE '"?id"?[ =:]+"?[a-f0-9]{32}' | grep -oE '[a-f0-9]{32}' | head -1 || true)
+kv_lookup() {
+  cf_api "/storage/kv/namespaces?per_page=100" \
+    | python3 -c 'import sys,json;print(next((n["id"] for n in json.load(sys.stdin)["result"] if n["title"].endswith("SESSIONS")),""))'
+}
+KV_ID=$(kv_lookup)
 if [ -z "$KV_ID" ]; then
-  KV_ID=$($WRANGLER kv namespace list \
-          | python3 -c 'import sys,json;print(next((n["id"] for n in json.load(sys.stdin) if n["title"].endswith("SESSIONS")), ""))')
+  $WRANGLER kv namespace create SESSIONS >/dev/null 2>&1 || true
+  KV_ID=$(kv_lookup)
 fi
 [ -n "$KV_ID" ] || { echo "Could not resolve the KV namespace id" >&2; exit 1; }
 ok "KV SESSIONS = $KV_ID"

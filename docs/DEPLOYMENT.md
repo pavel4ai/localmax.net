@@ -1,25 +1,23 @@
 # Deployment
 
+## Status
+
+**Deployed.** <https://localmax.net> and <https://api.localmax.net> are live.
+
+| Resource | Identifier |
+|---|---|
+| D1 | `localmax` · `9213a459-085c-4480-99a9-ff3c585f77a5` |
+| R2 | `localmax-evidence` (private) |
+| KV | `SESSIONS` · `4dd415265b2c4dd5845fdcbc765e6d7e` |
+| Queue | `localmax-validation` + `localmax-validation-dlq` |
+| Turnstile | `0x4AAAAAAEFeDtlaeyxznTXA` (localmax.net, www.localmax.net) |
+
 ## The API token
 
-The token currently in `.cloudflare` is **zone-scoped only**. It can read the `localmax.net`
-zone and its DNS records, and nothing else. Verified by direct probe:
-
-| Capability | Status |
-|---|---|
-| Zone read (`localmax.net`) | ✅ works |
-| DNS records | ✅ works |
-| Account settings read | ❌ denied |
-| Workers Scripts | ❌ denied |
-| D1 | ❌ denied |
-| R2 | ❌ denied |
-| Workers KV | ❌ denied |
-| Queues | ❌ denied |
-| Pages | ❌ denied |
-| Turnstile | ❌ denied |
-
-Nothing can be deployed with it. Create a replacement at
-<https://dash.cloudflare.com/profile/api-tokens> → **Create Custom Token** with:
+The token must be account-scoped. A zone-only token — the default if you start from the
+DNS templates — can read the zone and nothing else, and fails on the first resource it
+tries to create. Create one at <https://dash.cloudflare.com/profile/api-tokens> →
+**Create Custom Token** with:
 
 | Scope | Permission | Level |
 |---|---|---|
@@ -39,9 +37,9 @@ Account resources: `f1407b52c0bb1b803fc4780c29c65c22`. Zone resources: `localmax
 The **Edit Cloudflare Workers** template covers most of it but omits D1, Queues and
 Turnstile — add those three by hand.
 
-> **Rotate the existing token as well.** It was written to a file in the working tree. It is
-> gitignored and CI refuses to build if it is ever staged, but a credential that has touched
-> disk in a shared directory should not be considered private.
+> **Treat `.cloudflare` as compromised-by-default.** It holds a live token in the working
+> tree. It is gitignored and CI fails the build if it is ever staged, but a credential that
+> has touched disk in a shared directory should be rotated on a schedule regardless.
 
 ## One command
 
@@ -80,15 +78,18 @@ script both enforce this.
 
 ## Turnstile
 
-Anonymous submission is gated on Turnstile, and the API refuses to accept submissions in
-production without `TURNSTILE_SECRET_KEY`. Create a widget for `localmax.net`, then:
+Configured. The widget covers `localmax.net` and `www.localmax.net` in managed mode; its
+site key is in `[vars] TURNSTILE_SITE_KEY` and its secret is a Worker secret.
+
+To rotate:
 
 ```bash
 npx wrangler secret put TURNSTILE_SECRET_KEY --config apps/api/wrangler.toml
-# and put the site key in [vars] TURNSTILE_SITE_KEY in the same file
+# and update [vars] TURNSTILE_SITE_KEY in the same file
 ```
 
-Reads work without it; only publishing is blocked.
+Reads never require it; only publishing does. The API refuses submissions in production
+if the secret is absent, rather than silently accepting unverified ones.
 
 ## The Git archive (optional)
 
@@ -107,11 +108,14 @@ npx wrangler secret put GITHUB_APP_INSTALLATION_ID --config apps/api/wrangler.to
 
 ## Continuous deployment
 
-`.github/workflows/deploy.yml` deploys on push to `main`. Add two repository secrets:
+Enabled. `.github/workflows/deploy.yml` deploys on push to `main`, gated on the
+`CLOUDFLARE_CONFIGURED` repository variable so the workflow skips cleanly rather than
+failing if the credentials are ever removed.
 
 ```bash
-gh secret set CLOUDFLARE_API_TOKEN   # the rescoped token
-gh secret set CLOUDFLARE_ACCOUNT_ID  # f1407b52c0bb1b803fc4780c29c65c22
+gh secret set CLOUDFLARE_API_TOKEN
+gh secret set CLOUDFLARE_ACCOUNT_ID
+gh variable set CLOUDFLARE_CONFIGURED --body true
 ```
 
 ## Local development

@@ -20,12 +20,12 @@ API_ORIGIN = "https://api.localmax.net"
 MAX_ARTIFACT_BYTES = "67108864"
 MAX_SUBMISSION_BYTES = "134217728"
 # Cloudflare Turnstile public site key. The secret lives in a Worker secret.
-TURNSTILE_SITE_KEY = "0x4AAAAAAA_placeholder"
+TURNSTILE_SITE_KEY = "0x4AAAAAAEFeDtlaeyxznTXA"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "localmax"
-database_id = "PLACEHOLDER_CREATE_WITH_WRANGLER"
+database_id = "9213a459-085c-4480-99a9-ff3c585f77a5"
 migrations_dir = "migrations"
 
 [[r2_buckets]]
@@ -34,7 +34,7 @@ bucket_name = "localmax-evidence"
 
 [[kv_namespaces]]
 binding = "SESSIONS"
-id = "PLACEHOLDER_CREATE_WITH_WRANGLER"
+id = "4dd415265b2c4dd5845fdcbc765e6d7e"
 
 # Native edge rate limiting. Cheaper and far more accurate under concurrency than KV
 # counters, which serialise on a single key.
