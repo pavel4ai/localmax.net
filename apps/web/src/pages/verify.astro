@@ -28,14 +28,15 @@ const siteKey = config?.turnstile_site_key ?? "";
         </p>
 
         <div class="widget">
-          <div
-            id="turnstile"
-            class="cf-turnstile"
-            data-sitekey={siteKey}
-            data-callback="onVerified"
-            data-theme="dark"
-          ></div>
-          <p id="status" class="status">Waiting for the check to complete…</p>
+          {/* The challenge id rides on a data attribute rather than an injected variable, so
+              the script below is a plain static asset with nothing templated into it. */}
+          <div id="turnstile" data-sitekey={siteKey} data-challenge={challengeId}></div>
+          <p id="status" class="status">Loading the check…</p>
+          <noscript>
+            <p class="status err">
+              This step needs JavaScript. It is the only page on the site that does.
+            </p>
+          </noscript>
         </div>
 
         <p class="muted small">
@@ -48,31 +49,85 @@ const siteKey = config?.turnstile_site_key ?? "";
 
   {valid && (
     <>
-      <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
-      <script is:inline define:vars={{ challengeId }}>
-        window.onVerified = async (token) => {
+      {/*
+        Explicit rendering, not Turnstile's implicit mode.
+
+        Implicit rendering depends on the loader scanning the DOM for `.cf-turnstile` at
+        exactly the right moment; when that scan does not happen the result is an empty div
+        and no error anywhere — which is the worst possible outcome for the one interactive
+        step in the whole submission path. Rendering by hand from the loader's own `onload`
+        removes the ordering dependency, and the error/expired/timeout callbacks mean a
+        failure says so instead of showing nothing.
+
+        The callback must exist before the loader runs, so this script precedes api.js.
+      */}
+      <script is:inline>
+        (function () {
+          const el = document.getElementById("turnstile");
           const status = document.getElementById("status");
-          status.textContent = "Verifying…";
-          try {
-            const res = await fetch(`/api/challenge/${challengeId}/solve`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ turnstile_token: token }),
-            });
-            if (res.ok) {
-              status.textContent = "Verified. You can close this tab — your terminal is continuing.";
-              status.className = "status ok";
-            } else {
-              const body = await res.json().catch(() => ({}));
-              status.textContent = body.message || "Verification failed. Run `localmax submit` again.";
-              status.className = "status err";
-            }
-          } catch {
-            status.textContent = "Could not reach the verification service. Check your connection and retry.";
-            status.className = "status err";
+          const challengeId = el.dataset.challenge;
+
+          function say(text, kind) {
+            status.textContent = text;
+            status.className = "status" + (kind ? " " + kind : "");
           }
-        };
+
+          async function submitToken(token) {
+            say("Verifying…");
+            try {
+              const res = await fetch("/api/challenge/" + challengeId + "/solve", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ turnstile_token: token }),
+              });
+              if (res.ok) {
+                say("Verified. You can close this tab — your terminal is continuing.", "ok");
+              } else {
+                const body = await res.json().catch(() => ({}));
+                say(body.message || "Verification failed. Run `localmax submit` again.", "err");
+              }
+            } catch (_) {
+              say("Could not reach the verification service. Check your connection and retry.", "err");
+            }
+          }
+
+          window.onTurnstileLoad = function () {
+            if (!window.turnstile) {
+              say("The verification widget could not load. Disable any script blocker and reload.", "err");
+              return;
+            }
+            say("Complete the check below.");
+            window.turnstile.render(el, {
+              sitekey: el.dataset.sitekey,
+              theme: "dark",
+              callback: submitToken,
+              "error-callback": function (code) {
+                say("The verification widget reported an error (" + (code || "unknown") + "). Reload to try again.", "err");
+              },
+              "expired-callback": function () {
+                say("The check expired. Reload the page to try again.", "err");
+              },
+              "timeout-callback": function () {
+                say("The check timed out. Reload the page to try again.", "err");
+              },
+            });
+          };
+
+          // If the loader never arrives at all — blocked, offline, or a bad site key — say
+          // so rather than leaving the reader staring at a box that never appears.
+          setTimeout(function () {
+            if (!el.hasChildNodes()) {
+              say("The verification widget did not load. Disable any script blocker and reload.", "err");
+            }
+          }, 10000);
+        })();
       </script>
+      <script
+        is:inline
+        src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=onTurnstileLoad"
+        async
+        defer
+      ></script>
     </>
   )}
 </Layout>
@@ -80,7 +135,7 @@ const siteKey = config?.turnstile_site_key ?? "";
 <style>
   .verify { max-width: 620px; padding: 88px 24px 120px; }
   .verify h1 { font-size: 2rem; margin: 12px 0 16px; }
-  .widget { margin: 32px 0 20px; }
+  .widget { margin: 32px 0 20px; min-height: 90px; }
   .status { font-size: 13.5px; color: var(--text-muted); margin-top: 16px; }
   .status.ok { color: var(--good); }
   .status.err { color: var(--critical); }
