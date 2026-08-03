@@ -76,12 +76,23 @@ results/                Accepted manifests, archived from D1 in batches
 docs/                   Architecture, methodology, operations
 ```
 
+## Deploy
+
+The Cloudflare API token in `.cloudflare` is zone-scoped only and cannot deploy anything.
+[`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) lists the exact permissions to add, then:
+
+```bash
+source .cloudflare && export CLOUDFLARE_API_TOKEN="$CLOUDFLARE_ACCOUNT_TOKEN"
+./scripts/provision-cloudflare.sh
+```
+
 ## Development
 
 ```bash
 npm install                 # workspace root
 npm run dev:api             # Hono Worker on :8787 with local D1/R2/KV
 npm run dev:web             # Astro on :4321
+npm run seed:local          # migrate + 263 demonstration results
 npm run test                # TS + Python test suites
 python -m pip install -e ".[dev]"
 python -m localmax_runner doctor
