@@ -28,18 +28,22 @@ const siteKey = config?.turnstile_site_key ?? "";
         </p>
 
         <div class="widget">
-          {/* The challenge id rides on a data attribute rather than an injected variable, so
-              the script below is a plain static asset with nothing templated into it. */}
+          {/*
+            Canonical implicit-render markup. The challenge id rides on a data attribute so
+            the script stays static with nothing templated into it.
+          */}
           <div
             id="turnstile"
             class="cf-turnstile"
             data-sitekey={siteKey}
             data-challenge={challengeId}
+            data-action="submit"
             data-callback="lmVerify"
             data-error-callback="lmVerifyError"
             data-theme="dark"
           ></div>
           <p id="status" class="status">Loading the check…</p>
+          <p id="diag" class="diag"></p>
           <noscript>
             <p class="status err">
               This step needs JavaScript. It is the only page on the site that does.
@@ -56,106 +60,117 @@ const siteKey = config?.turnstile_site_key ?? "";
   </section>
 
   {valid && (
-    <>
-      {/*
-        Two independent paths to a rendered widget, because each alone has failed here:
+    <script is:inline>
+      (function () {
+        var el = document.getElementById("turnstile");
+        var statusEl = document.getElementById("status");
+        var diagEl = document.getElementById("diag");
+        var challengeId = el.dataset.challenge;
+        var t0 = Date.now();
+        var scriptLoaded = null; // null = pending, true = onload, false = onerror
 
-        - Implicit rendering scans the DOM for `.cf-turnstile` when the script loads. The
-          markup provides everything it needs, but with `async defer` and a redirect in
-          front of the script that scan does not always happen.
-        - `?onload=` does not survive at all: api.js answers 302 to
-          /turnstile/v0/g/<hash>/api.js and the redirect drops the query string, so the
-          callback is never invoked.
+        function say(text, kind) {
+          statusEl.textContent = text;
+          statusEl.className = "status" + (kind ? " " + kind : "");
+        }
 
-        So the script below also polls for the API to become usable and renders by hand if
-        the implicit pass did not, guarding on child nodes so the two can never both draw.
-        Note that `window.turnstile` is installed as an empty stub immediately and filled
-        in later, so the guard has to test for `render` rather than for the object.
-      */}
-      <script is:inline>
-        (function () {
-          const el = document.getElementById("turnstile");
-          const status = document.getElementById("status");
-          const challengeId = el.dataset.challenge;
+        // Shown only on failure. Turnstile's own failure mode is an empty box and silence,
+        // which is unactionable for whoever hits it; this states which step broke, so a bug
+        // report carries the one fact that separates the possible causes.
+        function diagnose() {
+          var ts = typeof window.turnstile;
+          diagEl.textContent =
+            "diagnostic: script=" +
+            (scriptLoaded === null ? "pending" : scriptLoaded ? "loaded" : "blocked") +
+            " · api=" + ts +
+            (ts === "object" && window.turnstile ? "/render=" + typeof window.turnstile.render : "") +
+            " · widget=" + (el.hasChildNodes() ? "drawn" : "empty") +
+            " · " + Math.round((Date.now() - t0) / 1000) + "s";
+        }
 
-          function say(text, kind) {
-            status.textContent = text;
-            status.className = "status" + (kind ? " " + kind : "");
-          }
-
-          // Named globals so implicit rendering can reach the same handlers.
-          window.lmVerify = submitToken;
-          window.lmVerifyError = function (code) {
-            say("Verification error " + (code || "unknown") + ". Reload to try again.", "err");
-          };
-
-          async function submitToken(token) {
-            say("Verifying…");
-            try {
-              const res = await fetch("/api/challenge/" + challengeId + "/solve", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ turnstile_token: token }),
-              });
-              if (res.ok) {
-                say("Verified. You can close this tab — your terminal is continuing.", "ok");
-              } else {
-                const body = await res.json().catch(() => ({}));
-                say(body.message || "Verification failed. Run `localmax submit` again.", "err");
-              }
-            } catch (_) {
-              say("Could not reach the verification service. Check your connection and retry.", "err");
+        window.lmVerify = async function (token) {
+          say("Verifying…");
+          try {
+            var res = await fetch("/api/challenge/" + challengeId + "/solve", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ turnstile_token: token }),
+            });
+            if (res.ok) {
+              say("Verified. You can close this tab — your terminal is continuing.", "ok");
+              diagEl.textContent = "";
+            } else {
+              var body = await res.json().catch(function () { return {}; });
+              say(body.message || "Verification failed. Run `localmax submit` again.", "err");
             }
+          } catch (_) {
+            say("Could not reach the verification service. Check your connection and retry.", "err");
           }
+        };
 
-          function render() {
-            if (el.hasChildNodes()) return; // implicit rendering already drew it
+        window.lmVerifyError = function (code) {
+          say("Verification error " + (code || "unknown") + ". Reload to try again.", "err");
+          diagnose();
+        };
+
+        function renderIfNeeded() {
+          if (el.hasChildNodes()) return true;
+          if (!window.turnstile || typeof window.turnstile.render !== "function") return false;
+          try {
+            window.turnstile.render(el, {
+              sitekey: el.dataset.sitekey,
+              action: "submit",
+              theme: "dark",
+              callback: window.lmVerify,
+              "error-callback": window.lmVerifyError,
+              "expired-callback": function () {
+                say("The check expired. Reload the page to try again.", "err");
+              },
+            });
+          } catch (e) {
+            say("Could not start the check: " + (e && e.message ? e.message : e), "err");
+            diagnose();
+          }
+          return true;
+        }
+
+        // The API is loaded by hand so onload and onerror can be observed. From a plain
+        // <script> tag in markup there is no way to tell "blocked by an extension or the
+        // network" apart from "loaded but never initialised", and those need opposite fixes.
+        var s = document.createElement("script");
+        s.src = "https://challenges.cloudflare.com/turnstile/v0/api.js";
+        s.async = true;
+        s.defer = true;
+        s.onload = function () { scriptLoaded = true; };
+        s.onerror = function () {
+          scriptLoaded = false;
+          say("The verification script was blocked before it loaded. A browser extension, a corporate proxy or a DNS filter is stopping challenges.cloudflare.com.", "err");
+          diagnose();
+        };
+        document.head.appendChild(s);
+
+        var waited = 0;
+        var timer = setInterval(function () {
+          if (renderIfNeeded()) {
+            clearInterval(timer);
             say("Complete the check below.");
-            try {
-              window.turnstile.render(el, {
-                sitekey: el.dataset.sitekey,
-                theme: "dark",
-                callback: submitToken,
-                "error-callback": function (code) {
-                  say("Verification error " + (code || "unknown") + ". Reload to try again.", "err");
-                },
-                "expired-callback": function () {
-                  say("The check expired. Reload the page to try again.", "err");
-                },
-                "timeout-callback": function () {
-                  say("The check timed out. Reload the page to try again.", "err");
-                },
-              });
-            } catch (e) {
-              say("Could not start the check: " + (e && e.message ? e.message : e), "err");
-            }
+            return;
           }
-
-          // Distinguishes "the script never arrived" from "it arrived and drew nothing",
-          // because those need different fixes and a single generic message hides which.
-          var waited = 0;
-          var timer = setInterval(function () {
-            if (el.hasChildNodes()) { clearInterval(timer); say("Complete the check below."); return; }
-            if (window.turnstile && typeof window.turnstile.render === "function") {
-              clearInterval(timer);
-              render();
-              setTimeout(function () {
-                if (!el.hasChildNodes()) {
-                  say("The check loaded but drew nothing. This is a bug — please report it.", "err");
-                }
-              }, 5000);
-              return;
-            }
-            waited += 100;
-            if (waited >= 15000) {
-              clearInterval(timer);
-              say("The verification script did not load. Disable any script blocker and reload.", "err");
-            }
-          }, 100);
-        })();
-      </script>
-      <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
-    </>
+          waited += 100;
+          if (waited >= 20000) {
+            clearInterval(timer);
+            if (scriptLoaded === false) return; // onerror already reported it
+            say(
+              scriptLoaded
+                ? "The check loaded but never started. This is usually an extension interfering with challenges.cloudflare.com."
+                : "The check did not load in 20 seconds. It is most likely blocked by an extension, proxy or DNS filter.",
+              "err",
+            );
+            diagnose();
+          }
+        }, 100);
+      })();
+    </script>
   )}
 </Layout>
 
@@ -166,5 +181,12 @@ const siteKey = config?.turnstile_site_key ?? "";
   .status { font-size: 13.5px; color: var(--text-muted); margin-top: 16px; }
   .status.ok { color: var(--good); }
   .status.err { color: var(--critical); }
+  .diag {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--text-muted);
+    margin-top: 8px;
+    overflow-wrap: anywhere;
+  }
   .small { font-size: 12.5px; }
 </style>
