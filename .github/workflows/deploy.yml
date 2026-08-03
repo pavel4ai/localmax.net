@@ -59,11 +59,17 @@ jobs:
         run: |
           set -euo pipefail
           for i in $(seq 1 10); do
-            if curl -fsS https://api.localmax.net/health | grep -q '"ok":true'; then
+            if curl -fsS https://api.localmax.net/health -o /tmp/health.json \
+               && grep -q '"ok":true' /tmp/health.json; then
               echo "API healthy"; break
             fi
             echo "waiting for the API to come up ($i/10)"; sleep 6
           done
           curl -fsS https://api.localmax.net/v1/profiles > /dev/null
-          curl -fsS https://localmax.net/ | grep -q "LocalMax"
+
+          # Written to a file rather than piped into grep: `grep -q` exits on the first
+          # match and closes the pipe, curl then fails to write and exits 23, and pipefail
+          # turns a passing smoke test into a failed deploy.
+          curl -fsS https://localmax.net/ -o /tmp/home.html
+          grep -q "LocalMax" /tmp/home.html
           echo "Deployment verified"

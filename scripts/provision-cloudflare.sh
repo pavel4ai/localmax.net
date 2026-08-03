@@ -184,7 +184,8 @@ $WRANGLER deploy --config apps/web/dist/server/wrangler.json
 
 info "Smoke test"
 for i in $(seq 1 12); do
-  if curl -fsS https://api.localmax.net/health 2>/dev/null | grep -q '"ok":true'; then
+  if curl -fsS https://api.localmax.net/health -o /tmp/lm-health.json 2>/dev/null \
+     && grep -q '"ok":true' /tmp/lm-health.json; then
     ok "API healthy"
     break
   fi
@@ -193,7 +194,7 @@ for i in $(seq 1 12); do
 done
 
 curl -fsS https://api.localmax.net/v1/profiles >/dev/null && ok "profiles endpoint"
-curl -fsS https://localmax.net/ | grep -q LocalMax && ok "website"
+curl -fsS https://localmax.net/ -o /tmp/lm-home.html && grep -q LocalMax /tmp/lm-home.html && ok "website"
 
 cat <<'DONE'
 
