@@ -21,6 +21,27 @@
       "digest": "sha256:8b807837a06edf3d62d359d967984315e288697cd988913ce793adc55a846b17",
       "platform": "linux/amd64",
       "released_at": "2026-08-03T20:08:27.634Z"
+    },
+    {
+      "image": "ghcr.io/pavel4ai/localmax-base",
+      "tag": "0.1.0",
+      "digest": "sha256:7f39bfee9ce51473e5560524eb95174717ae924c90e48b389df6d89861c783dc",
+      "platform": "linux/amd64,linux/arm64",
+      "released_at": "2026-08-03T20:33:50.670Z"
+    },
+    {
+      "image": "ghcr.io/pavel4ai/localmax-llm",
+      "tag": "0.1.0",
+      "digest": "sha256:575b676f8d5a084d949e343d62e90a3186a37df17a4fae173257a048ecaca437",
+      "platform": "linux/amd64",
+      "released_at": "2026-08-03T20:33:51.387Z"
+    },
+    {
+      "image": "ghcr.io/pavel4ai/localmax-diffusion",
+      "tag": "0.1.0",
+      "digest": "sha256:5633c1ebc15b3d54cc177ff3c7f0408d8f6d0b5ec5067dffc13a8e7cd35f5515",
+      "platform": "linux/amd64",
+      "released_at": "2026-08-03T20:33:52.822Z"
     }
   ]
 }
