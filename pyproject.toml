@@ -1,0 +1,70 @@
+[project]
+name = "localmax-runner"
+version = "0.1.0"
+description = "LocalMax benchmark runner: run pinned local-AI benchmarks and publish results"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [{ name = "LocalMax contributors" }]
+keywords = ["benchmark", "llm", "inference", "gpu", "diffusion"]
+
+dependencies = [
+  "httpx>=0.27",
+  "rich>=13.7",
+  "psutil>=5.9",
+  "nvidia-ml-py>=12.560",
+  "cryptography>=42.0",
+  "jsonschema>=4.21",
+  "platformdirs>=4.2",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+  "pytest-asyncio>=0.23",
+  "ruff>=0.6",
+  "mypy>=1.11",
+  "respx>=0.21",
+]
+# Installed inside the diffusion container only. Not needed to submit or inspect.
+diffusion = [
+  "torch>=2.4",
+  "diffusers>=0.31",
+  "transformers>=4.45",
+  "accelerate>=1.0",
+  "safetensors>=0.4",
+  "pillow>=10.4",
+]
+
+[project.scripts]
+localmax = "localmax_runner.cli:main"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+localmax_runner = ["py.typed"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "SIM", "RUF"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_unused_ignores = true
+disallow_untyped_defs = true
+ignore_missing_imports = true
+files = ["src/localmax_runner"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

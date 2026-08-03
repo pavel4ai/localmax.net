@@ -1,0 +1,28 @@
+{
+  "name": "@localmax/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "prebuild": "node ../../scripts/build-worker-assets.mjs",
+    "build": "tsc --noEmit",
+    "dev": "npm run prebuild && wrangler dev",
+    "check": "npm run prebuild && tsc --noEmit",
+    "test": "npm run prebuild && vitest run",
+    "deploy": "npm run prebuild && wrangler deploy",
+    "migrate:local": "wrangler d1 migrations apply localmax --local",
+    "migrate:remote": "wrangler d1 migrations apply localmax --remote"
+  },
+  "dependencies": {
+    "hono": "^4.6.14"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.20.1",
+    "@cloudflare/workers-types": "^5.20260730.1",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "typescript": "^5.7.3",
+    "vitest": "^4.1.0",
+    "wrangler": "^4.118.0"
+  }
+}

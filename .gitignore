@@ -1,0 +1,52 @@
+# ---------------------------------------------------------------------------
+# Secrets. Never commit. `.cloudflare` holds a live Cloudflare API token.
+# ---------------------------------------------------------------------------
+.cloudflare
+.dev.vars
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+!benchmarks/**/*.key
+localmax-signing-key*
+.wrangler/
+
+# Node
+node_modules/
+dist/
+.astro/
+.output/
+*.tsbuildinfo
+.vite/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.eggs/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+build/
+
+# Runner local state (models, runs, evidence)
+.localmax/
+runs/
+models/
+tmp/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Bootstrap dir created before the monorepo existed
+localmax-cloudflare/
+
+# Generated from schemas/, benchmarks/ and containers/released-images.json by
+# scripts/build-worker-assets.mjs. Regenerated on every build, dev, test and deploy;
+# committing it would let the bundled copy drift from its sources.
+apps/api/src/generated/

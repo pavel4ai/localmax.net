@@ -1,0 +1,620 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://localmax.net/schemas/result.schema.json",
+  "title": "LocalMax result manifest",
+  "description": "One benchmark run on one system. Measured data and user-supplied labels are kept strictly separate: everything under 'submitter' is user text, everything else is measured or pinned.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "run_id",
+    "created_at",
+    "profile",
+    "model",
+    "container",
+    "runtime",
+    "hardware",
+    "software",
+    "workloads",
+    "headline",
+    "telemetry",
+    "artifacts",
+    "submitter",
+    "signature"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "$ref": "common.schema.json#/$defs/semver"
+    },
+    "run_id": {
+      "$ref": "common.schema.json#/$defs/runId"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "duration_s": {
+      "type": "number",
+      "minimum": 0
+    },
+    "profile": {
+      "type": "object",
+      "required": [
+        "id",
+        "version",
+        "category",
+        "tier",
+        "lane",
+        "hash"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^(llm|vision|diffusion)-(entry|enthusiast|frontier)-(base|int4|nvfp4|fp8)$"
+        },
+        "version": {
+          "$ref": "common.schema.json#/$defs/semver"
+        },
+        "category": {
+          "$ref": "common.schema.json#/$defs/category"
+        },
+        "tier": {
+          "$ref": "common.schema.json#/$defs/tier"
+        },
+        "lane": {
+          "$ref": "common.schema.json#/$defs/lane"
+        },
+        "hash": {
+          "$ref": "common.schema.json#/$defs/sha256",
+          "description": "Hash of the canonical profile file. Proves which rules were in force."
+        },
+        "frozen": {
+          "type": "boolean"
+        }
+      }
+    },
+    "model": {
+      "type": "object",
+      "required": [
+        "repository",
+        "revision",
+        "precision",
+        "parameters_b"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "repository": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{40}$",
+          "description": "Immutable git commit of the model repository."
+        },
+        "precision": {
+          "$ref": "common.schema.json#/$defs/precision"
+        },
+        "parameters_b": {
+          "type": "number",
+          "minimum": 0
+        },
+        "weights_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "license": {
+          "type": "string",
+          "maxLength": 100
+        }
+      }
+    },
+    "container": {
+      "type": "object",
+      "required": [
+        "image",
+        "digest",
+        "runner_version",
+        "platform"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "image": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "digest": {
+          "$ref": "common.schema.json#/$defs/sha256"
+        },
+        "runner_version": {
+          "$ref": "common.schema.json#/$defs/semver"
+        },
+        "platform": {
+          "type": "string",
+          "enum": [
+            "linux/amd64",
+            "linux/arm64"
+          ]
+        },
+        "official": {
+          "type": "boolean",
+          "description": "True only when the digest matches a project-signed release. Required for 'verified'."
+        }
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "required": [
+        "name",
+        "version"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "enum": [
+            "vllm",
+            "diffusers",
+            "trtllm",
+            "llamacpp"
+          ]
+        },
+        "version": {
+          "type": "string",
+          "maxLength": 60
+        },
+        "harness": {
+          "type": "string",
+          "enum": [
+            "aiperf",
+            "diffusion-adapter",
+            "builtin"
+          ]
+        },
+        "harness_version": {
+          "type": "string",
+          "maxLength": 60
+        },
+        "flags": {
+          "type": "object",
+          "description": "Every runtime flag actually used. Must equal the profile's pinned set for a ranked result.",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          }
+        }
+      }
+    },
+    "hardware": {
+      "type": "object",
+      "required": [
+        "gpus",
+        "gpu_count",
+        "parallelism",
+        "cpu",
+        "system_ram_bytes",
+        "memory_type"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "gpus": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "vram_bytes",
+              "architecture"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string",
+                "maxLength": 100
+              },
+              "vram_bytes": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "architecture": {
+                "$ref": "common.schema.json#/$defs/architecture"
+              },
+              "compute_capability": {
+                "type": "string",
+                "pattern": "^\\d+\\.\\d+$"
+              },
+              "memory_bandwidth_gb_s": {
+                "type": "number",
+                "minimum": 0
+              },
+              "power_limit_w": {
+                "type": "number",
+                "minimum": 0
+              },
+              "power_default_limit_w": {
+                "type": "number",
+                "minimum": 0
+              },
+              "graphics_clock_max_mhz": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "memory_clock_max_mhz": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "pcie_gen": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 6
+              },
+              "pcie_width": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 16
+              },
+              "supports_fp8": {
+                "type": "boolean"
+              },
+              "supports_nvfp4": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "gpu_count": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 8
+        },
+        "parallelism": {
+          "$ref": "common.schema.json#/$defs/parallelism"
+        },
+        "interconnect": {
+          "type": "string",
+          "enum": [
+            "none",
+            "pcie",
+            "nvlink",
+            "unified"
+          ],
+          "description": "RTX PRO 6000 Blackwell has no NVLink, so a 2-GPU result there is 'pcie' and PCIe topology matters."
+        },
+        "cpu": {
+          "type": "object",
+          "required": [
+            "model",
+            "cores",
+            "arch"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "model": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "cores": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "threads": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "arch": {
+              "$ref": "common.schema.json#/$defs/cpuArch"
+            }
+          }
+        },
+        "system_ram_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "memory_type": {
+          "$ref": "common.schema.json#/$defs/memoryType"
+        },
+        "cooling": {
+          "type": "string",
+          "enum": [
+            "air",
+            "aio",
+            "custom-loop",
+            "blower",
+            "passive",
+            "unknown"
+          ],
+          "description": "User-declared label. Never affects a score."
+        },
+        "tuning": {
+          "type": "string",
+          "enum": [
+            "stock",
+            "power-limited",
+            "undervolted",
+            "overclocked",
+            "unknown"
+          ],
+          "description": "User-declared label. Cross-checked against measured clocks and power limit."
+        }
+      }
+    },
+    "software": {
+      "type": "object",
+      "required": [
+        "os",
+        "kernel",
+        "arch",
+        "driver",
+        "cuda"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "os": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "kernel": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "arch": {
+          "$ref": "common.schema.json#/$defs/cpuArch"
+        },
+        "driver": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "cuda": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "container_runtime": {
+          "type": "string",
+          "maxLength": 60
+        },
+        "virtualization": {
+          "type": "string",
+          "enum": [
+            "none",
+            "wsl2",
+            "vm",
+            "unknown"
+          ]
+        }
+      }
+    },
+    "workloads": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 16,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "status",
+          "metrics"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,40}$"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "llm_interactive",
+              "llm_concurrency",
+              "llm_longcontext",
+              "vision_task",
+              "diffusion_t2i"
+            ]
+          },
+          "status": {
+            "$ref": "common.schema.json#/$defs/workloadStatus"
+          },
+          "config": {
+            "type": "object",
+            "description": "Echoed from the profile so a manifest is self-describing.",
+            "additionalProperties": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            }
+          },
+          "requests": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "errors": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "metrics": {
+            "$ref": "common.schema.json#/$defs/metricMap"
+          },
+          "latency_ms": {
+            "$ref": "common.schema.json#/$defs/percentiles"
+          },
+          "ttft_ms": {
+            "$ref": "common.schema.json#/$defs/percentiles"
+          },
+          "failure_reason": {
+            "type": "string",
+            "maxLength": 300
+          }
+        }
+      }
+    },
+    "headline": {
+      "type": "object",
+      "description": "The single ranked value for this profile, plus the secondary values shown beside it.",
+      "required": [
+        "metric",
+        "value",
+        "unit"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "metric": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "value": {
+          "type": "number"
+        },
+        "unit": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "secondary": {
+          "$ref": "common.schema.json#/$defs/metricMap"
+        }
+      }
+    },
+    "telemetry": {
+      "type": "object",
+      "required": [
+        "power_domain",
+        "coverage_pct",
+        "sample_interval_ms"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "power_domain": {
+          "$ref": "common.schema.json#/$defs/powerDomain"
+        },
+        "coverage_pct": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Share of measured wall time covered by telemetry samples. >=99 required for 'verified'."
+        },
+        "sample_interval_ms": {
+          "type": "integer",
+          "minimum": 10,
+          "maximum": 5000
+        },
+        "samples": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "power_avg_w": {
+          "type": "number",
+          "minimum": 0
+        },
+        "power_peak_w": {
+          "type": "number",
+          "minimum": 0
+        },
+        "energy_j": {
+          "type": "number",
+          "minimum": 0
+        },
+        "vram_peak_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "system_ram_peak_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "gpu_util_avg_pct": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "temperature_peak_c": {
+          "type": "number"
+        },
+        "throttle_events": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "thermal_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "power_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "reliability_count": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        }
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "items": {
+        "$ref": "common.schema.json#/$defs/artifact"
+      }
+    },
+    "submitter": {
+      "type": "object",
+      "description": "User-supplied labels only. Never used in any score.",
+      "required": [
+        "system_key"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "alias": {
+          "type": "string",
+          "maxLength": 40,
+          "pattern": "^[\\w .\\-]{0,40}$"
+        },
+        "system_name": {
+          "type": "string",
+          "maxLength": 60,
+          "pattern": "^[\\w .\\-]{0,60}$"
+        },
+        "system_key": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9+/]{43}=$",
+          "description": "Base64 Ed25519 public key generated randomly on first run. Pseudonymous system identity; not derived from hardware."
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 500
+        }
+      }
+    },
+    "signature": {
+      "type": "object",
+      "required": [
+        "algorithm",
+        "value"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "algorithm": {
+          "type": "string",
+          "const": "ed25519"
+        },
+        "value": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9+/]{86}==$"
+        },
+        "canonicalization": {
+          "type": "string",
+          "const": "jcs-rfc8785"
+        }
+      }
+    }
+  }
+}

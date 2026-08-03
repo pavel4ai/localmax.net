@@ -1,0 +1,389 @@
+---
+import Badge from "../../components/Badge.astro";
+import Distribution from "../../components/Distribution.astro";
+import Layout from "../../components/Layout.astro";
+import SourceData from "../../components/SourceData.astro";
+import StatTile from "../../components/StatTile.astro";
+import { api, type Finding, type ResultRow } from "../../lib/api";
+import {
+  CATEGORY_LABEL, LANE_LABEL, TIER_LABEL, ago, bytes, headline, isoDate,
+  metricLabel, ms, num, pct, seconds, short, systemLabel, unitFor, watts,
+} from "../../lib/format";
+
+const { runId } = Astro.params;
+
+interface Detail {
+  result: ResultRow & { manifest_json: string; findings_json: string; archived_at: string | null };
+  manifest: Record<string, any>;
+  findings: Finding[];
+  profile: Record<string, any> | null;
+  gpu_spec: Record<string, any> | null;
+  context: {
+    percentile_overall: number | null;
+    percentile_same_gpu: number | null;
+    same_gpu_samples: number;
+    same_gpu_mean: number | null;
+    profile_samples: number;
+  };
+}
+
+const detail = await api<Detail>(`/v1/results/${runId}`);
+if (!detail?.result) return new Response(null, { status: 404, statusText: "Result not found" });
+
+const r = detail.result;
+const m = detail.manifest ?? {};
+const ranking = detail.profile?.ranking ?? { unit: r.headline_unit, direction: r.headline_direction, secondary: [] };
+
+const dist = await api<{ values: Array<{ headline_value: number }> }>(
+  `/v1/distribution/${r.profile_id}?gpu=${r.gpu_key}`,
+);
+const distValues = (dist?.values ?? []).map((v) => v.headline_value);
+
+const workloads: Array<Record<string, any>> = m.workloads ?? [];
+const artifacts: Array<Record<string, any>> = m.artifacts ?? [];
+const telemetry: Record<string, any> = m.telemetry ?? {};
+const gpu0: Record<string, any> = m.hardware?.gpus?.[0] ?? {};
+
+const secondary = (ranking.secondary ?? []) as Array<{ metric: string; label: string; unit: string; source_workload?: string }>;
+const secondaryValues = secondary
+  .map((s) => {
+    const w = workloads.find((x) => x.id === (s.source_workload ?? ranking.source_workload));
+    const v = w?.metrics?.[s.metric];
+    return { ...s, value: typeof v === "number" ? v : null };
+  })
+  .filter((s) => s.value !== null);
+
+const errors = detail.findings.filter((f) => f.severity === "error");
+const warnings = detail.findings.filter((f) => f.severity === "warning");
+const infos = detail.findings.filter((f) => f.severity === "info");
+
+const powerNote =
+  r.power_domain === "soc_module"
+    ? "SoC module power. Not comparable with a discrete GPU board."
+    : r.power_domain === "unavailable" ? "No power telemetry" : "GPU board power";
+---
+
+<Layout title={systemLabel(r)} description={`${systemLabel(r)} on ${r.profile_id}: ${headline(r.headline_value, r.headline_unit)} ${r.headline_unit}.`}>
+  <section class="wrap" style="padding:44px 0 0">
+    <div class="eyebrow">
+      <a href="/results">Results</a> {"/ "}
+      <a href={`/benchmarks/${r.profile_id}`}>{detail.profile?.display_name ?? r.profile_id}</a>
+    </div>
+
+    <div class="head">
+      <div>
+        <h1 style="font-size:2rem;margin:12px 0 10px">{systemLabel(r)}</h1>
+        <div class="badges">
+          <Badge verification={r.verification} ranked={r.ranked} />
+          <span class="badge">{CATEGORY_LABEL[r.category]}</span>
+          <span class="badge">{TIER_LABEL[r.tier]}</span>
+          <span class="badge">{LANE_LABEL[r.lane]}</span>
+          {r.gpu_count > 1 && <span class="badge">{r.parallelism.toUpperCase()}</span>}
+          {r.cooling && r.cooling !== "unknown" && <span class="badge">{r.cooling}</span>}
+          {r.tuning && r.tuning !== "unknown" && <span class="badge">{r.tuning}</span>}
+        </div>
+      </div>
+      <div class="head-actions">
+        <a href={`/compare?ids=${r.run_id}`} class="btn">Compare</a>
+        <a href={`/hardware/${r.gpu_key}`} class="btn">All {short(r.gpu_name)} results</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap" style="padding:28px 0 0">
+    <div class="headline-block">
+      <div class="headline-main">
+        <div class="tile-label">{metricLabel(r.headline_metric)}</div>
+        <div class="hero-figure">
+          {headline(r.headline_value, r.headline_unit)}<span class="unit">{r.headline_unit}</span>
+        </div>
+        {detail.context.percentile_same_gpu !== null && (
+          <div class="percentile">
+            {detail.context.percentile_same_gpu}th percentile among{" "}
+            {detail.context.same_gpu_samples} ranked {short(r.gpu_name)} result{detail.context.same_gpu_samples === 1 ? "" : "s"}
+            {detail.context.same_gpu_mean !== null && <> · mean {num(detail.context.same_gpu_mean)} {r.headline_unit}</>}
+          </div>
+        )}
+        {r.ranked === 0 && (
+          <div class="unranked-note">
+            Published in full, but excluded from the rank. The reason is in Validation below;
+            no submitted value has been altered.
+          </div>
+        )}
+      </div>
+
+      <div class="grid grid-3 headline-secondary">
+        {secondaryValues.slice(0, 6).map((s) => (
+          <StatTile label={s.label} value={num(s.value)} unit={s.unit} />
+        ))}
+      </div>
+    </div>
+  </section>
+
+  {distValues.length > 1 && (
+    <section class="section wrap">
+      <div class="section-head">
+        <h2>Where this sits</h2>
+        <span class="muted" style="font-size:13px">All ranked {short(r.gpu_name)} results on this profile</span>
+      </div>
+      <Distribution
+        values={distValues}
+        mark={r.ranked === 1 ? r.headline_value : null}
+        unit={r.headline_unit}
+        label={`${short(r.gpu_name)} on ${r.profile_id}`}
+      />
+      <SourceData
+        columns={[`${metricLabel(r.headline_metric)} (${r.headline_unit})`]}
+        rows={distValues.map((v) => [num(v)])}
+        filename={`localmax-${r.profile_id}-${r.gpu_key}.csv`}
+      />
+    </section>
+  )}
+
+  <section class="section wrap">
+    <h2>Per-workload measurements</h2>
+    <div class="table-scroll" style="margin-top:16px">
+      <table>
+        <thead>
+          <tr>
+            <th>Workload</th>
+            <th>Status</th>
+            <th class="num">Requests</th>
+            <th>Configuration</th>
+            <th>Metrics</th>
+          </tr>
+        </thead>
+        <tbody>
+          {workloads.map((w) => (
+            <tr>
+              <td class="primary">{w.id}</td>
+              <td>
+                <span class={`badge badge-${w.status === "passed" ? "verified" : "flagged"}`}>
+                  <span class="dot" aria-hidden="true"></span>{w.status}
+                </span>
+              </td>
+              <td class="num dim">{w.requests ?? "—"}{w.errors ? ` (${w.errors} err)` : ""}</td>
+              <td class="dim mono" style="white-space:normal;max-width:240px;font-size:11.5px">
+                {Object.entries(w.config ?? {})
+                  .slice(0, 4)
+                  .map(([k, v]) => `${k}=${Array.isArray(v) ? v.join("/") : String(v)}`)
+                  .join("  ")}
+              </td>
+              <td style="white-space:normal;max-width:420px">
+                <div class="metric-chips">
+                  {Object.entries(w.metrics ?? {})
+                    .filter(([, v]) => typeof v === "number")
+                    .slice(0, 8)
+                    .map(([k, v]) => (
+                      <span class="metric-chip">
+                        <span class="muted">{metricLabel(k)}</span>
+                        <strong>{num(v as number)}<span class="muted"> {unitFor(k)}</span></strong>
+                      </span>
+                    ))}
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="section wrap">
+    <h2>Telemetry</h2>
+    <div class="grid grid-4" style="margin-top:16px">
+      <StatTile label="Peak VRAM" value={bytes(telemetry.vram_peak_bytes)} />
+      <StatTile label="Average power" value={watts(telemetry.power_avg_w)} note={powerNote} />
+      <StatTile label="Peak power" value={watts(telemetry.power_peak_w)} />
+      <StatTile label="Peak temperature" value={telemetry.temperature_peak_c ? `${Math.round(telemetry.temperature_peak_c)}°C` : "—"} />
+      <StatTile label="GPU utilisation" value={pct(telemetry.gpu_util_avg_pct)} note="average over the run" />
+      <StatTile label="Total energy" value={telemetry.energy_j ? `${num(telemetry.energy_j / 3600, 1)} Wh` : "—"} />
+      <StatTile
+        label="Thermal throttle"
+        value={String(telemetry.throttle_events?.thermal_count ?? 0)}
+        note="samples with the thermal cap engaged"
+      />
+      <StatTile
+        label="Power throttle"
+        value={String(telemetry.throttle_events?.power_count ?? 0)}
+        note="samples at the power limit"
+      />
+    </div>
+    <p class="muted" style="margin-top:14px;font-size:13px">
+      Sampled every {telemetry.sample_interval_ms ?? "—"} ms, covering {pct(telemetry.coverage_pct, 1)} of
+      measured wall time{telemetry.samples ? ` (${num(telemetry.samples, 0)} samples)` : ""}.
+      {r.power_domain === "soc_module" &&
+        " This is a unified-memory system, so wattage covers the whole SoC module rather than a GPU board and is never ranked against discrete cards."}
+    </p>
+  </section>
+
+  <section class="section wrap">
+    <h2>System</h2>
+    <div class="grid grid-2" style="margin-top:16px">
+      <div class="tile spec">
+        <div class="tile-label">Hardware</div>
+        <dl>
+          <dt>GPU</dt><dd>{r.gpu_count > 1 ? `${r.gpu_count}× ` : ""}{r.gpu_name}</dd>
+          <dt>VRAM</dt><dd>{bytes(gpu0.vram_bytes)}{r.gpu_count > 1 ? ` each (${bytes((gpu0.vram_bytes ?? 0) * r.gpu_count)} total)` : ""}</dd>
+          <dt>Architecture</dt><dd>{r.gpu_architecture ?? "—"}{gpu0.compute_capability ? ` · cc ${gpu0.compute_capability}` : ""}</dd>
+          {gpu0.memory_bandwidth_gb_s && <><dt>Bandwidth</dt><dd>{num(gpu0.memory_bandwidth_gb_s, 0)} GB/s</dd></>}
+          {gpu0.power_limit_w && <><dt>Power limit</dt><dd>{watts(gpu0.power_limit_w)}{gpu0.power_default_limit_w && gpu0.power_default_limit_w !== gpu0.power_limit_w ? ` (stock ${watts(gpu0.power_default_limit_w)})` : ""}</dd></>}
+          {gpu0.pcie_gen && <><dt>PCIe</dt><dd>Gen {gpu0.pcie_gen} ×{gpu0.pcie_width}</dd></>}
+          {r.gpu_count > 1 && <><dt>Interconnect</dt><dd>{r.interconnect ?? "—"}</dd></>}
+          <dt>Memory model</dt><dd>{r.memory_type}</dd>
+          <dt>CPU</dt><dd>{r.cpu_model} ({m.hardware?.cpu?.cores} cores, {r.cpu_arch})</dd>
+          <dt>System RAM</dt><dd>{bytes(r.system_ram_bytes)}</dd>
+        </dl>
+      </div>
+      <div class="tile spec">
+        <div class="tile-label">Software and provenance</div>
+        <dl>
+          <dt>OS</dt><dd>{r.os}</dd>
+          <dt>Kernel</dt><dd class="mono">{m.software?.kernel ?? "—"}</dd>
+          <dt>Driver</dt><dd>{r.driver} · CUDA {r.cuda}</dd>
+          {r.virtualization && r.virtualization !== "none" && <><dt>Virtualisation</dt><dd>{r.virtualization}</dd></>}
+          <dt>Runtime</dt><dd>{r.runtime} {r.runtime_version}</dd>
+          <dt>Model</dt><dd class="mono">{r.model_repository}</dd>
+          <dt>Revision</dt><dd class="mono">{String(m.model?.revision ?? "").slice(0, 16)}</dd>
+          <dt>Container</dt><dd class="mono">{m.container?.image}</dd>
+          <dt>Digest</dt><dd class="mono">{String(m.container?.digest ?? "").slice(7, 23)}</dd>
+          <dt>Runner</dt><dd>{m.container?.runner_version} · {m.container?.platform}</dd>
+          <dt>Profile hash</dt><dd class="mono">{String(m.profile?.hash ?? "").slice(7, 23)}</dd>
+        </dl>
+      </div>
+    </div>
+    {r.notes && (
+      <div class="panel" style="margin-top:18px;max-width:var(--measure)">
+        <div class="tile-label" style="margin-bottom:8px">Submitter note</div>
+        <p style="margin:0;font-size:13.5px">{r.notes}</p>
+      </div>
+    )}
+  </section>
+
+  <section class="section wrap">
+    <h2>Validation</h2>
+    <p class="lede" style="margin-top:8px">
+      Every derived metric here was recomputed from the raw per-request records before this
+      result was accepted. Findings are recorded verbatim; a submitted measurement is never
+      silently corrected.
+    </p>
+
+    {detail.findings.length === 0 ? (
+      <div class="panel" style="margin-top:18px;max-width:var(--measure)">
+        <span style="color:var(--good)">✓</span> All automated checks passed with no findings.
+      </div>
+    ) : (
+      <ul class="findings">
+        {[...errors, ...warnings, ...infos].map((f) => (
+          <li class={`finding finding-${f.severity}`}>
+            <span class="finding-severity">{f.severity}</span>
+            <div>
+              <div>{f.message}</div>
+              {f.field && <code class="muted">{f.field}</code>}
+            </div>
+          </li>
+        ))}
+      </ul>
+    )}
+  </section>
+
+  <section class="section wrap">
+    <h2>Evidence</h2>
+    <p class="lede" style="margin-top:8px">
+      Addressed by content hash, so the manifest and its evidence cannot drift apart.
+      Redaction runs locally before upload.
+    </p>
+    <div class="table-scroll" style="margin-top:16px">
+      <table>
+        <thead>
+          <tr><th>Artifact</th><th>Kind</th><th class="num">Size</th><th>Type</th><th>SHA-256</th></tr>
+        </thead>
+        <tbody>
+          {artifacts.map((a) => (
+            <tr>
+              <td class="primary">
+                <a href={`/api/evidence/${String(a.hash).replace("sha256:", "")}`} rel="nofollow">{a.name}</a>
+              </td>
+              <td class="dim">{a.kind}</td>
+              <td class="num dim">{bytes(a.size_bytes)}</td>
+              <td class="dim mono">{a.media_type}</td>
+              <td class="dim mono">{String(a.hash).slice(7, 23)}…</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+
+    <details class="source-data" style="margin-top:20px">
+      <summary>Raw result manifest</summary>
+      <pre class="cmd" style="max-height:520px;overflow:auto">{JSON.stringify(m, null, 2)}</pre>
+    </details>
+
+    <dl class="provenance">
+      <dt>Run ID</dt><dd class="mono">{r.run_id}</dd>
+      <dt>Benchmarked</dt><dd>{isoDate(r.created_at)}{m.duration_s ? ` · ${seconds(m.duration_s)} total` : ""}</dd>
+      <dt>Accepted</dt><dd>{isoDate(r.accepted_at)} ({ago(r.accepted_at)})</dd>
+      <dt>Archived to Git</dt>
+      <dd>
+        {r.archived_at
+          ? <a href={`https://github.com/pavel4ai/localmax.net/blob/main/results/${r.profile_id}/${r.profile_version}/${r.gpu_key}/${r.run_id}.json`}>view the committed manifest</a>
+          : <span class="muted">pending the next hourly archive</span>}
+      </dd>
+      <dt>Signature</dt>
+      <dd class="mono">ed25519 · key {String(m.submitter?.system_key ?? "").slice(0, 16)}…</dd>
+    </dl>
+    <p class="muted" style="font-size:12.5px;max-width:var(--measure)">
+      The signature proves this bundle came from one runner installation and has not been
+      modified since. It does not prove the reported hardware is real. That is what the
+      evidence, the recomputation and the distribution above are for.
+    </p>
+  </section>
+</Layout>
+
+<style>
+  .head { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; flex-wrap: wrap; }
+  .head-actions { display: flex; gap: 10px; }
+  .badges { display: flex; gap: 6px; flex-wrap: wrap; }
+
+  .headline-block { display: grid; grid-template-columns: minmax(280px, 1fr) 2fr; gap: 24px; align-items: start; }
+  .headline-main {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface-1);
+    padding: 24px;
+  }
+  .headline-main .unit { font-size: 0.3em; color: var(--text-muted); margin-left: 0.35em; letter-spacing: 0; }
+  .percentile { margin-top: 12px; font-size: 13px; color: var(--text-secondary); }
+  .unranked-note {
+    margin-top: 12px;
+    font-size: 12.5px;
+    color: var(--serious);
+    border-top: 1px solid var(--border);
+    padding-top: 12px;
+  }
+  .headline-secondary { align-self: stretch; }
+
+  .metric-chips { display: flex; flex-wrap: wrap; gap: 6px 14px; }
+  .metric-chip { display: flex; gap: 6px; align-items: baseline; font-size: 12px; }
+  .metric-chip strong { font-weight: 550; font-variant-numeric: tabular-nums; }
+
+  .spec { padding: 20px; }
+  .spec dl { display: grid; grid-template-columns: minmax(96px, auto) 1fr; gap: 6px 16px; margin: 12px 0 0; font-size: 12.5px; }
+  .spec dt { color: var(--text-muted); }
+  .spec dd { margin: 0; color: var(--text-secondary); overflow-wrap: anywhere; }
+
+  .findings { list-style: none; margin: 18px 0 0; padding: 0; display: grid; gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .finding { display: flex; gap: 14px; padding: 14px 18px; background: var(--surface-1); font-size: 13px; color: var(--text-secondary); }
+  .finding-severity { flex: none; width: 68px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+  .finding-error .finding-severity { color: var(--critical); }
+  .finding-warning .finding-severity { color: var(--warning); }
+  .finding-info .finding-severity { color: var(--text-muted); }
+
+  .provenance { display: grid; grid-template-columns: minmax(120px, auto) 1fr; gap: 8px 20px; margin: 24px 0 14px; font-size: 13px; }
+  .provenance dt { color: var(--text-muted); }
+  .provenance dd { margin: 0; color: var(--text-secondary); overflow-wrap: anywhere; }
+
+  @media (max-width: 860px) {
+    .headline-block { grid-template-columns: 1fr; }
+  }
+</style>

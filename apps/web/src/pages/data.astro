@@ -1,0 +1,116 @@
+---
+import Layout from "../components/Layout.astro";
+import StatTile from "../components/StatTile.astro";
+import { api } from "../lib/api";
+import { compact } from "../lib/format";
+
+const stats = await api<{ totals: { results: number; ranked: number; gpus: number; systems: number } | null }>(
+  "/v1/stats",
+);
+const t = stats?.totals ?? { results: 0, ranked: 0, gpus: 0, systems: 0 };
+
+const endpoints = [
+  ["GET /v1/profiles", "Every profile with its pinned rules and result counts"],
+  ["GET /v1/profiles/:id", "One profile in full, including workloads and gates"],
+  ["GET /v1/leaderboard/:id", "Ranked results plus per-GPU distribution for one profile"],
+  ["GET /v1/results", "All accepted results, filterable and paginated"],
+  ["GET /v1/results/:runId", "One result with its full manifest, findings and percentile context"],
+  ["GET /v1/distribution/:id", "Every ranked headline value for one profile, optionally by GPU"],
+  ["GET /v1/hardware", "GPU registry with per-GPU result counts"],
+  ["GET /v1/hardware/:key", "Per-profile aggregates for one GPU"],
+  ["GET /v1/compare?ids=", "Two to four results side by side"],
+  ["GET /v1/stats", "Site totals and the most recent results"],
+  ["GET /v1/evidence/:hash", "One evidence artifact by content hash"],
+];
+---
+
+<Layout title="Open data" description="Download every LocalMax result. CC BY 4.0, no API key, no rate limit worth mentioning.">
+  <section class="wrap" style="padding:48px 0 0">
+    <div class="eyebrow">Open data</div>
+    <h1 style="margin:12px 0 16px;font-size:2.1rem">Take the data</h1>
+    <p class="lede">
+      Everything published here is CC BY 4.0. There is no API key and no registration. If you
+      are building something with it, we would like to hear about it, but you do not need to
+      ask.
+    </p>
+
+    <div class="grid grid-4" style="margin-top:28px">
+      <StatTile label="Results" value={compact(t.results)} />
+      <StatTile label="Ranked" value={compact(t.ranked)} />
+      <StatTile label="Systems" value={compact(t.systems)} />
+      <StatTile label="GPU models" value={compact(t.gpus)} />
+    </div>
+  </section>
+
+  <section class="section wrap">
+    <h2>The archive is Git</h2>
+    <p style="margin-top:10px">
+      Accepted manifests are committed to the public repository every hour, one file per
+      result, laid out by profile, version and GPU. That archive is canonical: the live
+      database is an index rebuilt from it, not the other way round.
+    </p>
+    <pre class="cmd">git clone https://github.com/pavel4ai/localmax.net.git
+ls localmax.net/results/llm-entry-base/0.1.0/rtx-4090/</pre>
+    <p style="margin-top:14px">
+      Each file is the manifest exactly as it was submitted and signed. Nothing is edited
+      after the fact; a correction is a new result with a finding attached, never a rewrite.
+    </p>
+  </section>
+
+  <section class="section wrap">
+    <h2>The read API</h2>
+    <p style="margin-top:10px">
+      Public, cached at the edge, CORS-open for GET. Base URL
+      <code>https://api.localmax.net</code>.
+    </p>
+    <div class="table-scroll" style="margin-top:18px">
+      <table>
+        <thead><tr><th>Endpoint</th><th>Returns</th></tr></thead>
+        <tbody>
+          {endpoints.map(([path, desc]) => (
+            <tr><td class="mono primary">{path}</td><td class="dim" style="white-space:normal">{desc}</td></tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    <pre class="cmd" style="margin-top:18px"><span class="c"># Every ranked RTX 4090 result on the Entry BF16 profile</span>
+curl 'https://api.localmax.net/v1/results?profile=llm-entry-base&gpu=rtx-4090&ranked=1'
+
+<span class="c"># The distribution behind a percentile figure</span>
+curl 'https://api.localmax.net/v1/distribution/llm-entry-base?gpu=rtx-4090'</pre>
+  </section>
+
+  <section class="section wrap">
+    <h2>Schemas</h2>
+    <p style="margin-top:10px">
+      The contracts are the source of truth for the whole project — the runner, the API and CI
+      all validate against these same files.
+    </p>
+    <ul class="links">
+      <li><a href="https://github.com/pavel4ai/localmax.net/blob/main/schemas/result.schema.json">result.schema.json</a> — one benchmark run</li>
+      <li><a href="https://github.com/pavel4ai/localmax.net/blob/main/schemas/profile.schema.json">profile.schema.json</a> — an immutable benchmark definition</li>
+      <li><a href="https://github.com/pavel4ai/localmax.net/blob/main/schemas/api.schema.json">api.schema.json</a> — submission and read contracts</li>
+      <li><a href="https://github.com/pavel4ai/localmax.net/blob/main/schemas/common.schema.json">common.schema.json</a> — shared definitions</li>
+    </ul>
+  </section>
+
+  <section class="section wrap">
+    <div class="panel" style="max-width:var(--measure)">
+      <h3>Attribution and caveats</h3>
+      <p style="margin-top:10px">
+        Cite as: <em>Data from LocalMax (localmax.net), CC BY 4.0.</em>
+      </p>
+      <p style="margin-bottom:0">
+        Results are contributed by the public. A verification state describes the completeness
+        and internal consistency of the evidence, not the honesty of the operator. Filter to
+        <code>verification=verified</code> and <code>ranked=1</code> for the strictest subset,
+        and treat any single result as one sample rather than a specification.
+      </p>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .links { list-style: none; padding: 0; display: grid; gap: 8px; font-size: 13.5px; color: var(--text-secondary); margin: 16px 0 0; }
+  .links a { color: var(--text-primary); border-bottom: 1px solid var(--border-strong); }
+</style>

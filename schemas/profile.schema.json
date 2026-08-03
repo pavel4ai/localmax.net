@@ -1,0 +1,509 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://localmax.net/schemas/profile.schema.json",
+  "title": "LocalMax benchmark profile",
+  "description": "An immutable definition of one benchmark. Everything that can change a measured number is pinned here. A frozen profile is never edited; a new version is published instead.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "id",
+    "version",
+    "frozen",
+    "display_name",
+    "category",
+    "tier",
+    "lane",
+    "requirements",
+    "model",
+    "runtime",
+    "workloads",
+    "ranking",
+    "validation"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "$ref": "common.schema.json#/$defs/semver"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^(llm|vision|diffusion)-(entry|enthusiast|frontier)-(base|int4|nvfp4|fp8)$"
+    },
+    "version": {
+      "$ref": "common.schema.json#/$defs/semver"
+    },
+    "frozen": {
+      "type": "boolean",
+      "description": "Once true, this file must never change. CI enforces it."
+    },
+    "display_name": {
+      "type": "string",
+      "maxLength": 60
+    },
+    "summary": {
+      "type": "string",
+      "maxLength": 300
+    },
+    "category": {
+      "$ref": "common.schema.json#/$defs/category"
+    },
+    "tier": {
+      "$ref": "common.schema.json#/$defs/tier"
+    },
+    "lane": {
+      "$ref": "common.schema.json#/$defs/lane"
+    },
+    "published": {
+      "type": "boolean",
+      "description": "A profile is runnable while unpublished, but its leaderboard is hidden until at least two independent systems have verified results."
+    },
+    "requirements": {
+      "type": "object",
+      "required": [
+        "min_vram_bytes",
+        "min_driver",
+        "architectures",
+        "platforms"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "min_vram_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "min_system_ram_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "min_disk_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "min_driver": {
+          "type": "string"
+        },
+        "min_compute_capability": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+$"
+        },
+        "architectures": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "common.schema.json#/$defs/architecture"
+          }
+        },
+        "platforms": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "enum": [
+              "linux/amd64",
+              "linux/arm64"
+            ]
+          }
+        },
+        "gpu_count": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 8
+          },
+          "description": "Permitted GPU counts. Each count is ranked separately."
+        },
+        "expected_runtime_minutes": {
+          "type": "number",
+          "minimum": 0
+        },
+        "expected_download_bytes": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "model": {
+      "type": "object",
+      "required": [
+        "repository",
+        "revision",
+        "precision",
+        "parameters_b",
+        "license"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "repository": {
+          "type": "string"
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^([a-f0-9]{40}|PENDING)$"
+        },
+        "precision": {
+          "$ref": "common.schema.json#/$defs/precision"
+        },
+        "parameters_b": {
+          "type": "number",
+          "minimum": 0
+        },
+        "weights_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "license": {
+          "type": "string"
+        },
+        "files": {
+          "type": "array",
+          "description": "Required files with hashes. Empty while the profile is a release candidate.",
+          "items": {
+            "type": "object",
+            "required": [
+              "path",
+              "hash",
+              "size_bytes"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "hash": {
+                "$ref": "common.schema.json#/$defs/sha256"
+              },
+              "size_bytes": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "required": [
+        "name",
+        "version",
+        "flags"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "enum": [
+            "vllm",
+            "diffusers",
+            "trtllm",
+            "llamacpp"
+          ]
+        },
+        "version": {
+          "type": "string"
+        },
+        "harness": {
+          "type": "string",
+          "enum": [
+            "aiperf",
+            "diffusion-adapter",
+            "builtin"
+          ]
+        },
+        "harness_version": {
+          "type": "string"
+        },
+        "flags": {
+          "type": "object",
+          "description": "The exact and complete flag set. A ranked result must match this.",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          }
+        },
+        "flag_overrides_allowed": {
+          "type": "array",
+          "description": "Flags a user may change without losing rank. Normally empty.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "server_ready_timeout_s": {
+          "type": "integer",
+          "minimum": 30,
+          "maximum": 3600
+        }
+      }
+    },
+    "workloads": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "config"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,40}$"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "llm_interactive",
+              "llm_concurrency",
+              "llm_longcontext",
+              "vision_task",
+              "diffusion_t2i"
+            ]
+          },
+          "required_for_rank": {
+            "type": "boolean",
+            "default": true
+          },
+          "warmup_requests": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "measured_requests": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "timeout_s": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "config": {
+            "type": "object",
+            "additionalProperties": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "array",
+                "null"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "assets": {
+      "type": "array",
+      "description": "Fixed benchmark inputs: prompt files, images, expected answers.",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "path",
+          "hash",
+          "license",
+          "source"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "hash": {
+            "$ref": "common.schema.json#/$defs/sha256"
+          },
+          "license": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "task": {
+            "type": "string",
+            "enum": [
+              "ocr",
+              "chart",
+              "document",
+              "description",
+              "reasoning",
+              "multi_image"
+            ]
+          },
+          "expected": {
+            "type": "string",
+            "description": "Deterministic expected answer, for gate tasks only."
+          }
+        }
+      }
+    },
+    "ranking": {
+      "type": "object",
+      "required": [
+        "metric",
+        "unit",
+        "direction",
+        "source_workload"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "metric": {
+          "type": "string"
+        },
+        "unit": {
+          "type": "string"
+        },
+        "direction": {
+          "type": "string",
+          "enum": [
+            "higher_is_better",
+            "lower_is_better"
+          ]
+        },
+        "source_workload": {
+          "type": "string"
+        },
+        "secondary": {
+          "type": "array",
+          "description": "Shown next to the rank. Never mixed into it.",
+          "items": {
+            "type": "object",
+            "required": [
+              "metric",
+              "label",
+              "unit"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "metric": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "unit": {
+                "type": "string"
+              },
+              "direction": {
+                "type": "string",
+                "enum": [
+                  "higher_is_better",
+                  "lower_is_better"
+                ]
+              },
+              "source_workload": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "gates": {
+          "type": "array",
+          "description": "A result must satisfy every gate to be ranked. It is still published if it fails.",
+          "items": {
+            "type": "object",
+            "required": [
+              "metric",
+              "comparator",
+              "value",
+              "source_workload"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "metric": {
+                "type": "string"
+              },
+              "comparator": {
+                "type": "string",
+                "enum": [
+                  "lte",
+                  "gte",
+                  "eq"
+                ]
+              },
+              "value": {
+                "type": "number"
+              },
+              "source_workload": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "validation": {
+      "type": "object",
+      "required": [
+        "required_artifacts",
+        "telemetry_interval_ms",
+        "min_telemetry_coverage_pct"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "required_artifacts": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "telemetry_interval_ms": {
+          "type": "integer",
+          "minimum": 10,
+          "maximum": 5000
+        },
+        "min_telemetry_coverage_pct": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "metric_recompute_tolerance_pct": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "plausibility": {
+          "type": "object",
+          "description": "Absolute sanity bounds. A value outside these is flagged for review, never silently altered.",
+          "additionalProperties": {
+            "type": "object",
+            "required": [
+              "min",
+              "max"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "min": {
+                "type": "number"
+              },
+              "max": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "max_repeat_cv_pct": {
+          "type": "number",
+          "description": "Permitted coefficient of variation across measured repetitions."
+        }
+      }
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

@@ -1,0 +1,4 @@
+{
+  "note": "Digests of container images the project has built, signed with Cosign and released. A result is only eligible for Verified if its container digest appears here. Appended by .github/workflows/containers.yml on every release; never edited by hand.",
+  "images": []
+}

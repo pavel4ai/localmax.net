@@ -1,0 +1,1 @@
+Read the chart. State the value of the largest bar or point, including its label and units. Output only that.

@@ -1,0 +1,89 @@
+---
+import Layout from "../components/Layout.astro";
+---
+
+<Layout title="Privacy" description="What the LocalMax runner collects, what it deliberately does not, and how to have a result removed.">
+  <section class="wrap prose">
+    <div class="eyebrow">Privacy</div>
+    <h1>Privacy</h1>
+    <p class="lede">
+      LocalMax is anonymous by default. No accounts, no email address, no tracking scripts,
+      no analytics. This page is the complete description of what leaves your machine.
+    </p>
+
+    <h2>What the runner collects</h2>
+    <p>Only what makes a result comparable:</p>
+    <ul>
+      <li>GPU model, count, VRAM, driver and CUDA version, PCIe link generation and width, power limit and clock configuration</li>
+      <li>CPU model, core count, architecture, total system RAM</li>
+      <li>OS name, kernel version, container runtime version</li>
+      <li>Profile ID and version, container image digest, model revision</li>
+      <li>Every measured metric, the raw per-request records behind them, and the GPU telemetry trace</li>
+    </ul>
+
+    <h2>What it never collects</h2>
+    <ul>
+      <li>Hostname, username, or any filesystem path</li>
+      <li>GPU serial numbers, board UUIDs, MAC addresses, or any stable hardware identifier</li>
+      <li>Environment variables, shell history, or data about unrelated processes</li>
+      <li>Your IP address is used transiently for rate limiting and is never stored with a result</li>
+    </ul>
+    <p>
+      Log output is redacted locally before it is written into the evidence bundle: paths,
+      home directories, usernames and anything matching a secret pattern are replaced. The
+      server scans again on arrival and rejects any submission that still contains one.
+    </p>
+
+    <h2>Your system identity</h2>
+    <p>
+      The runner generates a random Ed25519 keypair the first time it runs and stores it in
+      <code>~/.localmax/identity.json</code>. The public key acts as a pseudonymous
+      <em>system</em> identifier, so your machine can accumulate a result history across
+      driver updates and benchmark versions.
+    </p>
+    <p>
+      It is derived from randomness, not from your hardware. Delete that file and you are a
+      new, unlinkable system. It is never correlated with an IP address. A display alias and
+      system name are optional free text that you type in yourself.
+    </p>
+
+    <h2>Before anything is uploaded</h2>
+    <p>
+      <code>localmax inspect</code> prints the exact manifest and the full artifact list with
+      no network access at all. <code>localmax submit</code> shows the same list and requires
+      confirmation. Nothing is transmitted before you accept it.
+    </p>
+
+    <h2>Retention</h2>
+    <ul>
+      <li>Incomplete or rejected uploads are deleted after seven days.</li>
+      <li>Accepted evidence is retained while the result is public.</li>
+      <li>Accepted manifests are public, permanent, and mirrored into Git history.</li>
+    </ul>
+
+    <h2>Removal</h2>
+    <p>
+      Email <a href="mailto:privacy@localmax.net">privacy@localmax.net</a> with the run ID and
+      the signature produced by <code>localmax prove RUN_ID</code>, which demonstrates control
+      of the submitting key. The result and its evidence are removed. Git history is rewritten
+      only for exposed secrets or personal data.
+    </p>
+
+    <h2>This website</h2>
+    <p>
+      No cookies except a theme preference stored locally in your browser. No third-party
+      scripts, no fonts loaded from a CDN, no analytics. The verification page loads Cloudflare
+      Turnstile, and only that page.
+    </p>
+  </section>
+</Layout>
+
+<style>
+  .prose { max-width: 720px; padding: 56px 24px 40px; }
+  .prose h1 { font-size: 2.1rem; margin: 12px 0 16px; }
+  .prose h2 { margin: 44px 0 12px; padding-top: 22px; border-top: 1px solid var(--border); }
+  .prose p, .prose li { color: var(--text-secondary); }
+  .prose ul { padding-left: 20px; display: grid; gap: 9px; margin: 0 0 16px; }
+  .prose code { background: var(--surface-2); padding: 1px 5px; border-radius: 3px; font-size: 0.88em; }
+  .prose a { color: var(--text-primary); border-bottom: 1px solid var(--border-strong); }
+</style>

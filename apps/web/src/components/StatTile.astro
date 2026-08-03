@@ -1,0 +1,19 @@
+---
+interface Props {
+  label: string;
+  value: string;
+  unit?: string;
+  note?: string;
+  hero?: boolean;
+  title?: string;
+}
+const { label, value, unit, note, hero = false, title } = Astro.props;
+---
+
+<div class="tile" title={title}>
+  <div class="tile-label">{label}</div>
+  <div class={hero ? "tile-value hero-figure" : "tile-value"}>
+    {value}{unit && <span class="unit">{unit}</span>}
+  </div>
+  {note && <div class="tile-note">{note}</div>}
+</div>

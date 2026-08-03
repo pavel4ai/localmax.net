@@ -1,0 +1,276 @@
+{
+  "$schema": "../../schemas/profile.schema.json",
+  "schema_version": "1.0.0",
+  "id": "vision-frontier-base",
+  "version": "0.1.0",
+  "frozen": false,
+  "published": false,
+  "display_name": "Vision \u00b7 Frontier \u00b7 BF16",
+  "summary": "A 4B-class model at BF16 on 12 GB. The universal baseline: every supported NVIDIA GPU from an RTX 3060 12 GB upward runs this identically, so it is the one leaderboard that spans the whole hardware range.",
+  "category": "vision",
+  "tier": "frontier",
+  "lane": "base",
+  "requirements": {
+    "min_vram_bytes": 68719476736,
+    "min_system_ram_bytes": 68719476736,
+    "min_disk_bytes": 212600881152,
+    "min_driver": "550.54",
+    "min_compute_capability": "8.0",
+    "architectures": [
+      "blackwell",
+      "blackwell-gb10",
+      "hopper"
+    ],
+    "platforms": [
+      "linux/amd64",
+      "linux/arm64"
+    ],
+    "gpu_count": [
+      1,
+      2
+    ],
+    "expected_runtime_minutes": 14,
+    "expected_download_bytes": 70866960384
+  },
+  "model": {
+    "repository": "Qwen/Qwen3-VL-32B-Instruct",
+    "revision": "PENDING",
+    "precision": "bf16",
+    "parameters_b": 32.0,
+    "weights_bytes": 70866960384,
+    "license": "Apache-2.0",
+    "files": []
+  },
+  "runtime": {
+    "name": "vllm",
+    "version": "PENDING",
+    "harness": "aiperf",
+    "harness_version": "PENDING",
+    "server_ready_timeout_s": 900,
+    "flags": {
+      "dtype": "bfloat16",
+      "max-model-len": 32768,
+      "gpu-memory-utilization": 0.9,
+      "max-num-seqs": 16,
+      "enforce-eager": false,
+      "disable-log-requests": true,
+      "tensor-parallel-size": 1,
+      "swap-space": 0,
+      "limit-mm-per-prompt": "image=1"
+    },
+    "flag_overrides_allowed": []
+  },
+  "workloads": [
+    {
+      "id": "vision_ocr",
+      "kind": "vision_task",
+      "required_for_rank": true,
+      "warmup_requests": 2,
+      "measured_requests": 20,
+      "timeout_s": 900,
+      "config": {
+        "task": "ocr",
+        "image_set": "assets/vision/ocr",
+        "image_long_edge_px": 1080,
+        "prompt_file": "assets/vision/ocr/prompt.txt",
+        "max_output_tokens": 256,
+        "concurrency": 1,
+        "temperature": 0,
+        "deterministic_gate": true
+      }
+    },
+    {
+      "id": "vision_chart",
+      "kind": "vision_task",
+      "required_for_rank": true,
+      "warmup_requests": 2,
+      "measured_requests": 20,
+      "timeout_s": 900,
+      "config": {
+        "task": "chart",
+        "image_set": "assets/vision/chart",
+        "image_long_edge_px": 1080,
+        "prompt_file": "assets/vision/chart/prompt.txt",
+        "max_output_tokens": 256,
+        "concurrency": 1,
+        "temperature": 0,
+        "deterministic_gate": true
+      }
+    },
+    {
+      "id": "vision_document",
+      "kind": "vision_task",
+      "required_for_rank": true,
+      "warmup_requests": 2,
+      "measured_requests": 20,
+      "timeout_s": 900,
+      "config": {
+        "task": "document",
+        "image_set": "assets/vision/document",
+        "image_long_edge_px": 1080,
+        "prompt_file": "assets/vision/document/prompt.txt",
+        "max_output_tokens": 256,
+        "concurrency": 1,
+        "temperature": 0,
+        "deterministic_gate": true
+      }
+    },
+    {
+      "id": "vision_description",
+      "kind": "vision_task",
+      "required_for_rank": true,
+      "warmup_requests": 2,
+      "measured_requests": 20,
+      "timeout_s": 900,
+      "config": {
+        "task": "description",
+        "image_set": "assets/vision/description",
+        "image_long_edge_px": 1080,
+        "prompt_file": "assets/vision/description/prompt.txt",
+        "max_output_tokens": 256,
+        "concurrency": 1,
+        "temperature": 0,
+        "deterministic_gate": false
+      }
+    },
+    {
+      "id": "vision_reasoning",
+      "kind": "vision_task",
+      "required_for_rank": true,
+      "warmup_requests": 2,
+      "measured_requests": 20,
+      "timeout_s": 900,
+      "config": {
+        "task": "reasoning",
+        "image_set": "assets/vision/reasoning",
+        "image_long_edge_px": 1080,
+        "prompt_file": "assets/vision/reasoning/prompt.txt",
+        "max_output_tokens": 256,
+        "concurrency": 1,
+        "temperature": 0,
+        "deterministic_gate": false
+      }
+    },
+    {
+      "id": "vision_throughput",
+      "kind": "vision_task",
+      "required_for_rank": true,
+      "warmup_requests": 4,
+      "measured_requests": 40,
+      "timeout_s": 900,
+      "config": {
+        "task": "description",
+        "image_set": "assets/vision/description",
+        "image_long_edge_px": 1080,
+        "prompt_file": "assets/vision/description/prompt.txt",
+        "max_output_tokens": 128,
+        "concurrency": 2,
+        "temperature": 0,
+        "deterministic_gate": false
+      }
+    }
+  ],
+  "ranking": {
+    "metric": "throughput_img_min",
+    "unit": "img/min",
+    "direction": "higher_is_better",
+    "source_workload": "vision_throughput",
+    "secondary": [
+      {
+        "metric": "ttft_p50_ms",
+        "label": "TTFT p50",
+        "unit": "ms",
+        "direction": "lower_is_better",
+        "source_workload": "vision_throughput"
+      },
+      {
+        "metric": "ttft_p95_ms",
+        "label": "TTFT p95",
+        "unit": "ms",
+        "direction": "lower_is_better",
+        "source_workload": "vision_throughput"
+      },
+      {
+        "metric": "e2e_latency_p50_ms",
+        "label": "End to end p50",
+        "unit": "ms",
+        "direction": "lower_is_better",
+        "source_workload": "vision_throughput"
+      },
+      {
+        "metric": "decode_throughput_tok_s",
+        "label": "Decode",
+        "unit": "tok/s",
+        "direction": "higher_is_better",
+        "source_workload": "vision_throughput"
+      },
+      {
+        "metric": "image_prefill_p50_ms",
+        "label": "Image encode p50",
+        "unit": "ms",
+        "direction": "lower_is_better",
+        "source_workload": "vision_throughput"
+      },
+      {
+        "metric": "energy_per_image_j",
+        "label": "Energy / image",
+        "unit": "J",
+        "direction": "lower_is_better",
+        "source_workload": "vision_throughput"
+      }
+    ],
+    "gates": [
+      {
+        "metric": "quality_gate_pct",
+        "comparator": "gte",
+        "value": 90.0,
+        "source_workload": "vision_throughput",
+        "reason": "Deterministic OCR, chart and document answers must be at least 90% correct. A fast but wrong system is not ranked."
+      },
+      {
+        "metric": "error_ratio",
+        "comparator": "lte",
+        "value": 0.0,
+        "source_workload": "vision_throughput",
+        "reason": "Any failed request invalidates the measurement."
+      }
+    ]
+  },
+  "validation": {
+    "required_artifacts": [
+      "raw_records",
+      "telemetry",
+      "system_report",
+      "runtime_log",
+      "quality_report"
+    ],
+    "telemetry_interval_ms": 100,
+    "min_telemetry_coverage_pct": 99.0,
+    "metric_recompute_tolerance_pct": 0.5,
+    "max_repeat_cv_pct": 3.0,
+    "plausibility": {
+      "throughput_img_min": {
+        "min": 0.01,
+        "max": 10000
+      },
+      "ttft_p50_ms": {
+        "min": 1,
+        "max": 120000
+      },
+      "vram_peak_bytes": {
+        "min": 1073741824,
+        "max": 206158430208
+      },
+      "power_avg_w": {
+        "min": 5,
+        "max": 1200
+      }
+    }
+  },
+  "notes": [
+    "Release candidate. Model revision, vLLM version and AIPerf commit are PENDING until the bake-off.",
+    "Headline is images per minute at concurrency 2, which is what a reader actually wants to know.",
+    "Quality is a gate, not a score. OCR, chart and document tasks have deterministic expected answers; description and reasoning are collected but never scored until a stable evaluator exists.",
+    "Image encode time is separated from prompt prefill so the vision tower cost is visible."
+  ]
+}

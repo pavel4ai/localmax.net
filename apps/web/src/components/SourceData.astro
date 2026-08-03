@@ -1,0 +1,42 @@
+---
+/**
+ * Every chart on the site is required to expose the values behind it. This is that
+ * disclosure: a plain table plus a download of the same rows as CSV, generated inline so it
+ * needs no endpoint and no JavaScript.
+ */
+interface Props {
+  columns: string[];
+  rows: Array<Array<string | number | null>>;
+  filename?: string;
+  summary?: string;
+}
+
+const { columns, rows, filename = "localmax-chart-data.csv", summary = "Show the values behind this chart" } = Astro.props;
+
+const escape = (v: string | number | null) => {
+  const s = v === null || v === undefined ? "" : String(v);
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+};
+const csv = [columns.join(","), ...rows.map((r) => r.map(escape).join(","))].join("\n");
+const href = `data:text/csv;charset=utf-8,${encodeURIComponent(csv)}`;
+---
+
+<details class="source-data">
+  <summary>{summary} ({rows.length} rows)</summary>
+  <div class="table-scroll" style="max-height:340px;overflow-y:auto">
+    <table>
+      <thead>
+        <tr>{columns.map((c) => <th class={c === columns[0] ? "" : "num"}>{c}</th>)}</tr>
+      </thead>
+      <tbody>
+        {rows.map((row) => (
+          <tr>{row.map((cell, i) => <td class={i === 0 ? "" : "num dim"}>{cell ?? "—"}</td>)}</tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+  <p style="margin-top:10px">
+    <a href={href} download={filename} class="secondary">Download these values as CSV</a>
+    · <a href="/data" class="secondary">Full open dataset</a>
+  </p>
+</details>

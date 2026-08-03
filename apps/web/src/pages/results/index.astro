@@ -1,0 +1,170 @@
+---
+import Layout from "../../components/Layout.astro";
+import ResultTable from "../../components/ResultTable.astro";
+import { api, type GpuSummary, type ProfileSummary, type ResultRow } from "../../lib/api";
+import { CATEGORY_LABEL, LANE_LABEL, TIER_LABEL, compact, short } from "../../lib/format";
+
+const url = Astro.url;
+const q = url.searchParams;
+
+const PASSTHROUGH = [
+  "profile", "category", "tier", "lane", "gpu", "verification",
+  "runtime", "parallelism", "cooling", "tuning", "arch", "gpu_count", "ranked", "sort", "order",
+];
+
+const query = new URLSearchParams();
+for (const key of PASSTHROUGH) {
+  const value = q.get(key);
+  if (value) query.set(key, value);
+}
+const page = Math.max(0, Number.parseInt(q.get("page") ?? "0", 10) || 0);
+query.set("limit", "50");
+query.set("offset", String(page * 50));
+
+const [data, profileData, hardware] = await Promise.all([
+  api<{ results: ResultRow[]; total: number }>(`/v1/results?${query}`),
+  api<{ profiles: ProfileSummary[] }>("/v1/profiles"),
+  api<{ gpus: GpuSummary[] }>("/v1/hardware"),
+]);
+
+const results = data?.results ?? [];
+const total = data?.total ?? 0;
+const profiles = profileData?.profiles ?? [];
+const gpus = (hardware?.gpus ?? []).filter((g) => g.result_count > 0);
+
+/** Build a URL with one filter changed, preserving the rest. Filters live in the URL so a
+ *  filtered view is shareable and needs no client state. */
+function withFilter(key: string, value: string | null): string {
+  const next = new URLSearchParams(url.search);
+  next.delete("page");
+  if (value === null || next.get(key) === value) next.delete(key);
+  else next.set(key, value);
+  const s = next.toString();
+  return s ? `/results?${s}` : "/results";
+}
+
+const active = (key: string, value: string) => q.get(key) === value;
+const anyFilter = PASSTHROUGH.some((k) => q.get(k));
+---
+
+<Layout title="Results" description="Every accepted LocalMax benchmark result, filterable by profile, GPU, tier, quantization lane and verification state.">
+  <section class="wrap" style="padding:48px 0 0">
+    <div class="eyebrow">Results</div>
+    <h1 style="margin:12px 0 14px;font-size:2.1rem">{compact(total)} accepted result{total === 1 ? "" : "s"}</h1>
+    <p class="lede">
+      Everything published, ranked and unranked. Filters are held in the URL, so any view
+      here is a link you can share.
+    </p>
+  </section>
+
+  <section class="wrap" style="padding-top:28px">
+    <div class="filters">
+      <div class="filter-row">
+        <span class="filter-label">Category</span>
+        {(["llm", "vision", "diffusion"] as const).map((c) => (
+          <a href={withFilter("category", c)} class="chip" aria-current={active("category", c) ? "true" : undefined}>
+            {CATEGORY_LABEL[c]}
+          </a>
+        ))}
+      </div>
+      <div class="filter-row">
+        <span class="filter-label">Tier</span>
+        {(["entry", "enthusiast", "frontier"] as const).map((t) => (
+          <a href={withFilter("tier", t)} class="chip" aria-current={active("tier", t) ? "true" : undefined}>
+            {TIER_LABEL[t]}
+          </a>
+        ))}
+      </div>
+      <div class="filter-row">
+        <span class="filter-label">Lane</span>
+        {(["base", "int4", "nvfp4"] as const).map((l) => (
+          <a href={withFilter("lane", l)} class="chip" aria-current={active("lane", l) ? "true" : undefined}>
+            {LANE_LABEL[l]}
+          </a>
+        ))}
+      </div>
+      <div class="filter-row">
+        <span class="filter-label">State</span>
+        <a href={withFilter("verification", "verified")} class="chip" aria-current={active("verification", "verified") ? "true" : undefined}>Verified</a>
+        <a href={withFilter("verification", "community")} class="chip" aria-current={active("verification", "community") ? "true" : undefined}>Community</a>
+        <a href={withFilter("ranked", "1")} class="chip" aria-current={active("ranked", "1") ? "true" : undefined}>Ranked only</a>
+      </div>
+      {gpus.length > 0 && (
+        <div class="filter-row">
+          <span class="filter-label">GPU</span>
+          {gpus.slice(0, 12).map((g) => (
+            <a href={withFilter("gpu", g.key)} class="chip" aria-current={active("gpu", g.key) ? "true" : undefined}>
+              {short(g.name)} <span class="muted tnum">{g.result_count}</span>
+            </a>
+          ))}
+        </div>
+      )}
+      {profiles.filter((p) => p.result_count > 0).length > 0 && (
+        <div class="filter-row">
+          <span class="filter-label">Profile</span>
+          {profiles.filter((p) => p.result_count > 0).map((p) => (
+            <a href={withFilter("profile", p.id)} class="chip" aria-current={active("profile", p.id) ? "true" : undefined}>
+              {p.display_name}
+            </a>
+          ))}
+        </div>
+      )}
+      {anyFilter && (
+        <div class="filter-row">
+          <a href="/results" class="chip" style="border-style:dashed">Clear all filters</a>
+        </div>
+      )}
+    </div>
+  </section>
+
+  <section class="wrap" style="padding:24px 0 0">
+    <ResultTable results={results} />
+
+    {total > 50 && (
+      <nav class="pager" aria-label="Pagination">
+        {page > 0 && (
+          <a class="btn" href={`/results?${new URLSearchParams({ ...Object.fromEntries(url.searchParams), page: String(page - 1) })}`}>
+            ← Previous
+          </a>
+        )}
+        <span class="muted tnum">
+          {page * 50 + 1}–{Math.min(total, (page + 1) * 50)} of {compact(total)}
+        </span>
+        {(page + 1) * 50 < total && (
+          <a class="btn" href={`/results?${new URLSearchParams({ ...Object.fromEntries(url.searchParams), page: String(page + 1) })}`}>
+            Next →
+          </a>
+        )}
+      </nav>
+    )}
+  </section>
+</Layout>
+
+<style>
+  .filters {
+    display: grid;
+    gap: 10px;
+    padding: 18px 20px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface-1);
+  }
+  .filter-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .filter-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    width: 66px;
+    flex: none;
+  }
+  .pager {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin-top: 24px;
+    font-size: 13px;
+  }
+</style>

@@ -1,0 +1,124 @@
+---
+import { axisFormat, extent, linearScale, quantile } from "../lib/chart";
+import { num } from "../lib/format";
+
+interface Props {
+  values: number[];
+  /** The single value to mark inside the distribution, if any. */
+  mark?: number | null;
+  unit: string;
+  label?: string;
+  caption?: string;
+  height?: number;
+}
+
+const { values, mark = null, unit, label, caption, height = 92 } = Astro.props;
+
+const sorted = [...values].filter(Number.isFinite).sort((a, b) => a - b);
+const W = 1000;
+const PAD_X = 26;
+const AXIS_Y = 62;
+const STRIP_Y = 26;
+const STRIP_H = 22;
+
+const [lo, hi] = extent(sorted);
+const span = hi - lo || Math.abs(hi) || 1;
+const x = linearScale([lo - span * 0.06, hi + span * 0.06], [PAD_X, W - PAD_X]);
+
+const p25 = quantile(sorted, 0.25);
+const p50 = quantile(sorted, 0.5);
+const p75 = quantile(sorted, 0.75);
+
+const below = mark === null ? null : sorted.filter((v) => v < mark).length;
+const percentile =
+  below === null || sorted.length < 2 ? null : Math.round((below / (sorted.length - 1)) * 100);
+---
+
+{sorted.length === 0 ? (
+  <div class="empty">Not enough results yet to show a distribution.</div>
+) : (
+  <figure>
+    <svg
+      class="chart"
+      viewBox={`0 0 ${W} ${height}`}
+      role="img"
+      aria-label={`Distribution of ${sorted.length} results${label ? ` for ${label}` : ""} in ${unit}`}
+      preserveAspectRatio="none"
+      style={`height:${height}px`}
+    >
+      {/* Interquartile band: where the bulk of comparable systems actually land. */}
+      {p25 !== null && p75 !== null && (
+        <rect
+          x={x(p25)}
+          y={STRIP_Y}
+          width={Math.max(1, x(p75) - x(p25))}
+          height={STRIP_H}
+          fill="var(--series-1)"
+          opacity="0.14"
+          rx="2"
+        >
+          <title>Middle 50% of results: {num(p25)} to {num(p75)} {unit}</title>
+        </rect>
+      )}
+
+      {/* Every ranked result as a hairline tick. */}
+      {sorted.map((v) => (
+        <line
+          x1={x(v)}
+          y1={STRIP_Y + 3}
+          x2={x(v)}
+          y2={STRIP_Y + STRIP_H - 3}
+          stroke="var(--text-muted)"
+          stroke-width="1.5"
+          opacity="0.5"
+        >
+          <title>{num(v)} {unit}</title>
+        </line>
+      ))}
+
+      {p50 !== null && (
+        <line
+          x1={x(p50)} y1={STRIP_Y - 4} x2={x(p50)} y2={STRIP_Y + STRIP_H + 4}
+          stroke="var(--text-secondary)" stroke-width="1.5" stroke-dasharray="3 3"
+        >
+          <title>Median {num(p50)} {unit}</title>
+        </line>
+      )}
+
+      {/* The marked result gets a filled marker with a surface ring so it stays legible
+          even when it lands on top of the dense part of the strip. */}
+      {mark !== null && Number.isFinite(mark) && (
+        <g>
+          <circle
+            cx={x(mark)} cy={STRIP_Y + STRIP_H / 2} r="6"
+            fill="var(--accent)" class="mark-ring"
+          >
+            <title>This result: {num(mark)} {unit}</title>
+          </circle>
+          <text
+            x={x(mark)} y={STRIP_Y - 9}
+            text-anchor="middle" fill="var(--text-primary)"
+            font-size="11.5" font-weight="600"
+          >
+            {num(mark)}
+          </text>
+        </g>
+      )}
+
+      <line class="baseline" x1={PAD_X} y1={AXIS_Y} x2={W - PAD_X} y2={AXIS_Y} />
+      {x.ticks(5).map((t) => (
+        <g>
+          <line class="grid-line" x1={x(t)} y1={AXIS_Y} x2={x(t)} y2={AXIS_Y + 4} />
+          <text class="axis-label" x={x(t)} y={AXIS_Y + 17} text-anchor="middle">{axisFormat(t)}</text>
+        </g>
+      ))}
+    </svg>
+    <figcaption>
+      {caption ?? `${sorted.length} ranked result${sorted.length === 1 ? "" : "s"}`}
+      {p50 !== null && <> · median {num(p50)} {unit}</>}
+      {percentile !== null && (
+        <> · <strong style="color:var(--text-primary)">this result is at the {percentile}th percentile</strong></>
+      )}
+    </figcaption>
+  </figure>
+)}

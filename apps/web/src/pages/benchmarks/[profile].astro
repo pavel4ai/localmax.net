@@ -1,0 +1,240 @@
+---
+import BarChart, { type BarDatum } from "../../components/BarChart.astro";
+import Layout from "../../components/Layout.astro";
+import ResultTable from "../../components/ResultTable.astro";
+import Scatter, { type Point } from "../../components/Scatter.astro";
+import SourceData from "../../components/SourceData.astro";
+import StatTile from "../../components/StatTile.astro";
+import { api, type Ranking, type ResultRow } from "../../lib/api";
+import {
+  CATEGORY_LABEL, LANE_LABEL, TIER_LABEL, bytes, compact, headline, metricLabel,
+  num, short, systemLabel,
+} from "../../lib/format";
+
+const { profile: profileId } = Astro.params;
+
+interface LeaderboardResponse {
+  profile: {
+    id: string; display_name: string; summary: string | null;
+    category: "llm" | "vision" | "diffusion";
+    tier: string; lane: string; version: string;
+    ranking: Ranking; notes: string[];
+  };
+  summary: { total: number; gpus: number; systems: number; min_value: number; max_value: number; mean_value: number } | null;
+  results: ResultRow[];
+  by_gpu: Array<{ gpu_key: string; gpu_name: string; gpu_count: number; samples: number; mean_value: number; max_value: number; min_value: number }>;
+}
+
+const data = await api<LeaderboardResponse>(`/v1/leaderboard/${profileId}?limit=100`);
+const full = await api<Record<string, unknown>>(`/v1/profiles/${profileId}`);
+
+if (!data) return Astro.redirect("/benchmarks", 302);
+
+const { profile, summary, results, by_gpu } = data;
+const ranking = profile.ranking;
+const higher = ranking.direction === "higher_is_better";
+const best = higher
+  ? (summary?.max_value ?? null)
+  : (summary?.min_value ?? null);
+
+// Bars are one series, so they carry no categorical colour — colouring by rank would make
+// the palette encode position rather than identity. Every GPU is shown: silently keeping
+// the top N would read as "this is all of them" when it is not.
+const gpuBars: BarDatum[] = by_gpu.map((g) => ({
+  label: `${g.gpu_count > 1 ? `${g.gpu_count}× ` : ""}${short(g.gpu_name)}`,
+  value: higher ? g.max_value : g.min_value,
+  sublabel: `n=${g.samples}`,
+  title: `${short(g.gpu_name)} — best ${num(higher ? g.max_value : g.min_value)} ${ranking.unit}, mean ${num(g.mean_value)}, ${g.samples} result(s)`,
+}));
+
+const scatterPoints: Point[] = results
+  .filter((r) => r.ttft_p50_ms !== null || r.e2e_p50_ms !== null)
+  .map((r) => ({
+    x: (r.ttft_p50_ms ?? r.e2e_p50_ms)!,
+    y: r.headline_value,
+    label: `${r.gpu_count > 1 ? `${r.gpu_count}× ` : ""}${short(r.gpu_name)}`,
+    group: r.tier,
+  }));
+
+const model = (full?.model ?? {}) as Record<string, string | number>;
+const runtime = (full?.runtime ?? {}) as Record<string, unknown>;
+const requirements = (full?.requirements ?? {}) as Record<string, number | string[]>;
+const flags = (runtime.flags ?? {}) as Record<string, unknown>;
+const workloads = (full?.workloads ?? []) as Array<Record<string, unknown>>;
+---
+
+<Layout
+  title={profile.display_name}
+  description={profile.summary ?? `LocalMax ${profile.display_name} leaderboard.`}
+>
+  <section class="wrap" style="padding:48px 0 0">
+    <div class="eyebrow">
+      <a href="/benchmarks">Benchmarks</a> / {CATEGORY_LABEL[profile.category]} /
+      {TIER_LABEL[profile.tier]} / {LANE_LABEL[profile.lane]}
+    </div>
+    <h1 style="margin:12px 0 16px;font-size:2.1rem">{profile.display_name}</h1>
+    {profile.summary && <p class="lede">{profile.summary}</p>}
+
+    <div class="grid grid-4" style="margin-top:28px">
+      <StatTile
+        label={`Best ${metricLabel(ranking.metric)}`}
+        value={best === null ? "—" : headline(best, ranking.unit)}
+        unit={ranking.unit}
+        hero={false}
+      />
+      <StatTile label="Ranked results" value={compact(summary?.total ?? 0)} note={`${summary?.systems ?? 0} distinct systems`} />
+      <StatTile label="GPU models" value={compact(summary?.gpus ?? 0)} />
+      <StatTile
+        label="Minimum VRAM"
+        value={bytes(requirements.min_vram_bytes as number)}
+        note={requirements.expected_runtime_minutes ? `~${requirements.expected_runtime_minutes} min run` : undefined}
+      />
+    </div>
+  </section>
+
+  <section class="section wrap">
+    <div class="section-head">
+      <h2>Best result per GPU</h2>
+      <span class="muted" style="font-size:13px">{metricLabel(ranking.metric)} · {ranking.unit}</span>
+    </div>
+    <BarChart
+      data={gpuBars}
+      unit={ranking.unit}
+      direction={ranking.direction}
+      caption={`Fastest ranked result for each GPU model on ${profile.display_name}.`}
+    />
+    <SourceData
+      columns={["GPU", "GPUs", "Samples", `Best (${ranking.unit})`, `Mean (${ranking.unit})`]}
+      rows={by_gpu.map((g) => [
+        short(g.gpu_name), g.gpu_count, g.samples,
+        num(higher ? g.max_value : g.min_value), num(g.mean_value),
+      ])}
+      filename={`localmax-${profile.id}-by-gpu.csv`}
+    />
+  </section>
+
+  {scatterPoints.length > 2 && (
+    <section class="section wrap">
+      <div class="section-head">
+        <h2>Latency against throughput</h2>
+        <span class="muted" style="font-size:13px">Coloured by tier</span>
+      </div>
+      <Scatter
+        points={scatterPoints}
+        xLabel={profile.category === "diffusion" ? "Per-image latency p50" : "Time to first token p50"}
+        yLabel={metricLabel(ranking.metric)}
+        xUnit="ms"
+        yUnit={ranking.unit}
+        caption="Each point is one ranked result. Up and to the left is better: more throughput at lower latency."
+      />
+      <SourceData
+        columns={["System", "GPU", "Tier", "Latency p50 (ms)", `${metricLabel(ranking.metric)} (${ranking.unit})`]}
+        rows={results
+          .filter((r) => r.ttft_p50_ms !== null || r.e2e_p50_ms !== null)
+          .map((r) => [systemLabel(r), short(r.gpu_name), r.tier, num(r.ttft_p50_ms ?? r.e2e_p50_ms), num(r.headline_value)])}
+        filename={`localmax-${profile.id}-scatter.csv`}
+      />
+    </section>
+  )}
+
+  <section class="section wrap">
+    <div class="section-head">
+      <h2>Leaderboard</h2>
+      <a href={`/results?profile=${profile.id}`} class="secondary">Including unranked results →</a>
+    </div>
+    <ResultTable results={results} showRank showProfile={false} />
+  </section>
+
+  <section class="section wrap">
+    <h2>What is pinned</h2>
+    <p class="lede" style="margin-top:8px">
+      Everything below is fixed by the profile and checked on every submission. A result
+      whose runtime flags differ from these is published, but never ranked.
+    </p>
+
+    <div class="grid grid-2" style="margin-top:22px">
+      <div class="tile spec">
+        <div class="tile-label">Model</div>
+        <dl>
+          <dt>Repository</dt><dd class="mono">{model.repository}</dd>
+          <dt>Revision</dt><dd class="mono">{String(model.revision) === "PENDING" ? <span class="muted">pending freeze</span> : String(model.revision).slice(0, 12)}</dd>
+          <dt>Precision</dt><dd>{String(model.precision)}</dd>
+          <dt>Parameters</dt><dd>{num(model.parameters_b as number, 0)} B</dd>
+          <dt>Licence</dt><dd>{model.license}</dd>
+        </dl>
+      </div>
+      <div class="tile spec">
+        <div class="tile-label">Runtime</div>
+        <dl>
+          <dt>Engine</dt><dd>{String(runtime.name)} {String(runtime.version)}</dd>
+          <dt>Harness</dt><dd>{String(runtime.harness ?? "—")}</dd>
+          {Object.entries(flags).slice(0, 8).map(([k, v]) => (
+            <>
+              <dt class="mono">{k}</dt><dd class="mono">{String(v)}</dd>
+            </>
+          ))}
+        </dl>
+      </div>
+    </div>
+
+    <div class="grid grid-2" style="margin-top:1px">
+      <div class="tile spec">
+        <div class="tile-label">Workloads</div>
+        <dl>
+          {workloads.map((w) => (
+            <>
+              <dt>{String(w.id)}</dt>
+              <dd class="mono" style="font-size:11.5px">
+                {Object.entries((w.config ?? {}) as Record<string, unknown>)
+                  .filter(([k]) => !k.includes("file") && !k.includes("set"))
+                  .slice(0, 5)
+                  .map(([k, v]) => `${k}=${Array.isArray(v) ? v.join("/") : String(v)}`)
+                  .join("  ")}
+              </dd>
+            </>
+          ))}
+        </dl>
+      </div>
+      <div class="tile spec">
+        <div class="tile-label">Ranking</div>
+        <dl>
+          <dt>Ranked on</dt>
+          <dd>{metricLabel(ranking.metric)} ({ranking.unit}, {higher ? "higher" : "lower"} is better)</dd>
+          {(ranking.gates ?? []).map((g) => (
+            <>
+              <dt>Gate</dt>
+              <dd>{metricLabel(g.metric)} {g.comparator === "lte" ? "≤" : g.comparator === "gte" ? "≥" : "="} {g.value}</dd>
+            </>
+          ))}
+          {(ranking.secondary ?? []).length > 0 && (
+            <>
+              <dt>Also shown</dt>
+              <dd>{(ranking.secondary ?? []).map((s) => s.label).join(", ")}</dd>
+            </>
+          )}
+        </dl>
+      </div>
+    </div>
+
+    {profile.notes.length > 0 && (
+      <div class="panel" style="margin-top:24px;max-width:var(--measure)">
+        <div class="tile-label" style="margin-bottom:10px">Design notes</div>
+        <ul class="notes">{profile.notes.map((n) => <li>{n}</li>)}</ul>
+      </div>
+    )}
+  </section>
+</Layout>
+
+<style>
+  .spec { padding: 20px; }
+  .spec dl {
+    display: grid;
+    grid-template-columns: minmax(90px, auto) 1fr;
+    gap: 6px 16px;
+    margin: 12px 0 0;
+    font-size: 12.5px;
+  }
+  .spec dt { color: var(--text-muted); }
+  .spec dd { margin: 0; color: var(--text-secondary); overflow-wrap: anywhere; }
+  .notes { margin: 0; padding-left: 18px; display: grid; gap: 9px; font-size: 13px; color: var(--text-secondary); }
+</style>

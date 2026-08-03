@@ -1,0 +1,99 @@
+---
+import type { ResultRow } from "../lib/api";
+import Badge from "./Badge.astro";
+import { ago, bytes, headline, ms, num, short, systemLabel, watts, LANE_LABEL, TIER_LABEL } from "../lib/format";
+
+interface Props {
+  results: ResultRow[];
+  showRank?: boolean;
+  showProfile?: boolean;
+  highlight?: string;
+  emptyMessage?: string;
+}
+
+const {
+  results,
+  showRank = false,
+  showProfile = true,
+  highlight,
+  emptyMessage = "No results match these filters yet.",
+} = Astro.props;
+
+// The category of the first row decides which measurement columns are meaningful. A mixed
+// list falls back to the headline column only, because showing tok/s beside s/step in one
+// column would invite exactly the comparison the site refuses to make.
+const categories = new Set(results.map((r) => r.category));
+const single = categories.size === 1 ? [...categories][0] : null;
+---
+
+{results.length === 0 ? (
+  <div class="empty">{emptyMessage}</div>
+) : (
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          {showRank && <th class="rank">#</th>}
+          <th>System</th>
+          <th>GPU</th>
+          {showProfile && <th>Profile</th>}
+          <th class="num">Headline</th>
+          {single === "llm" && <th class="num">Prefill</th>}
+          {single === "llm" && <th class="num">TTFT p50</th>}
+          {single === "llm" && <th class="num">Inter-token p95</th>}
+          {single === "vision" && <th class="num">TTFT p50</th>}
+          {single === "vision" && <th class="num">Accuracy</th>}
+          {single === "diffusion" && <th class="num">Images / min</th>}
+          {single === "diffusion" && <th class="num">Per image p50</th>}
+          <th class="num">Peak VRAM</th>
+          <th class="num">Power</th>
+          <th>State</th>
+          <th class="num">Added</th>
+        </tr>
+      </thead>
+      <tbody>
+        {results.map((r, i) => (
+          <tr style={r.run_id === highlight ? "background:var(--accent-dim)" : undefined}>
+            {showRank && <td class="rank">{i + 1}</td>}
+            <td class="primary">
+              <a href={`/results/${r.run_id}`}>{systemLabel(r)}</a>
+            </td>
+            <td>
+              <a href={`/hardware/${r.gpu_key}`} class="secondary">
+                {r.gpu_count > 1 ? `${r.gpu_count}× ` : ""}{short(r.gpu_name)}
+              </a>
+            </td>
+            {showProfile && (
+              <td class="dim">
+                <a href={`/benchmarks/${r.profile_id}`}>
+                  {TIER_LABEL[r.tier]} · {LANE_LABEL[r.lane]}
+                </a>
+              </td>
+            )}
+            <td class="num primary">
+              {headline(r.headline_value, r.headline_unit)}
+              <span class="muted"> {r.headline_unit}</span>
+            </td>
+            {single === "llm" && <td class="num dim">{num(r.prefill_tok_s)}</td>}
+            {single === "llm" && <td class="num dim">{ms(r.ttft_p50_ms)}</td>}
+            {single === "llm" && <td class="num dim">{ms(r.itl_p95_ms)}</td>}
+            {single === "vision" && <td class="num dim">{ms(r.ttft_p50_ms)}</td>}
+            {single === "vision" && <td class="num dim">{r.quality_gate_pct === null ? "—" : `${num(r.quality_gate_pct, 0)}%`}</td>}
+            {single === "diffusion" && <td class="num dim">{num(r.images_per_minute)}</td>}
+            {single === "diffusion" && <td class="num dim">{num(r.e2e_p50_ms === null ? null : r.e2e_p50_ms / 1000)}</td>}
+            <td class="num dim">{bytes(r.vram_peak_bytes)}</td>
+            <td class="num dim" title={
+              r.power_domain === "soc_module"
+                ? "SoC module power on a unified-memory system. Not comparable with discrete GPU board power."
+                : r.power_domain === "unavailable" ? "No power telemetry available." : "GPU board power."
+            }>
+              {watts(r.power_avg_w)}{r.power_domain === "soc_module" && <span class="muted"> soc</span>}
+            </td>
+            <td><Badge verification={r.verification} ranked={r.ranked} compact={showRank} /></td>
+            <td class="num dim">{ago(r.accepted_at)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+)}

@@ -1,0 +1,10 @@
+{
+  "license": "CC0-1.0",
+  "source": "Project-owned. Written for this benchmark; deliberately free of named artists, styles and living people.",
+  "note": "Fixed prompt set for every diffusion profile. Changing this list is a major profile version bump: it changes the measured work.",
+  "prompts": [
+    "a cross-section diagram of a mechanical watch movement, technical illustration, even lighting, white background",
+    "an aerial photograph of a container terminal at dawn, long shadows, stacked containers, high detail",
+    "a still life of laboratory glassware on a brushed steel bench, soft directional light, shallow depth of field"
+  ]
+}

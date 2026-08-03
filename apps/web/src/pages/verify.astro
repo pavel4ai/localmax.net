@@ -1,0 +1,88 @@
+---
+import Layout from "../components/Layout.astro";
+import { api } from "../lib/api";
+
+const challengeId = Astro.url.searchParams.get("c") ?? "";
+const valid = /^[0-9a-f]{32}$/.test(challengeId);
+
+const config = await api<{ turnstile_site_key: string }>("/v1/config");
+const siteKey = config?.turnstile_site_key ?? "";
+---
+
+<Layout title="Verify submission" noindex>
+  <section class="wrap verify">
+    <div class="eyebrow">Submission</div>
+    <h1>One quick check</h1>
+
+    {!valid ? (
+      <p class="lede">
+        This link is missing its challenge code. Run <code>localmax submit</code> again to get
+        a fresh one.
+      </p>
+    ) : (
+      <>
+        <p class="lede">
+          LocalMax accepts results anonymously — no account, no email, no GitHub token. This
+          one browser check is what keeps bulk fabrication expensive. It does not identify you
+          and nothing about you is stored.
+        </p>
+
+        <div class="widget">
+          <div
+            id="turnstile"
+            class="cf-turnstile"
+            data-sitekey={siteKey}
+            data-callback="onVerified"
+            data-theme="dark"
+          ></div>
+          <p id="status" class="status">Waiting for the check to complete…</p>
+        </div>
+
+        <p class="muted small">
+          Your terminal is polling for this. Once it turns green you can close this tab and
+          watch the upload finish there.
+        </p>
+      </>
+    )}
+  </section>
+
+  {valid && (
+    <>
+      <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+      <script is:inline define:vars={{ challengeId }}>
+        window.onVerified = async (token) => {
+          const status = document.getElementById("status");
+          status.textContent = "Verifying…";
+          try {
+            const res = await fetch(`/api/challenge/${challengeId}/solve`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ turnstile_token: token }),
+            });
+            if (res.ok) {
+              status.textContent = "Verified. You can close this tab — your terminal is continuing.";
+              status.className = "status ok";
+            } else {
+              const body = await res.json().catch(() => ({}));
+              status.textContent = body.message || "Verification failed. Run `localmax submit` again.";
+              status.className = "status err";
+            }
+          } catch {
+            status.textContent = "Could not reach the verification service. Check your connection and retry.";
+            status.className = "status err";
+          }
+        };
+      </script>
+    </>
+  )}
+</Layout>
+
+<style>
+  .verify { max-width: 620px; padding: 88px 24px 120px; }
+  .verify h1 { font-size: 2rem; margin: 12px 0 16px; }
+  .widget { margin: 32px 0 20px; }
+  .status { font-size: 13.5px; color: var(--text-muted); margin-top: 16px; }
+  .status.ok { color: var(--good); }
+  .status.err { color: var(--critical); }
+  .small { font-size: 12.5px; }
+</style>

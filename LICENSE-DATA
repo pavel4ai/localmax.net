@@ -1,0 +1,55 @@
+LocalMax Benchmark Data License
+===============================
+
+This license covers accepted benchmark results published by the LocalMax project: the
+manifests under `results/`, the aggregates derived from them, and the evidence artifacts
+served from the LocalMax evidence store.
+
+It does NOT cover project source code, which is licensed under Apache-2.0 (see LICENSE),
+nor benchmark input assets, whose individual licenses are recorded per asset in the profile
+definitions under `benchmarks/profiles/`, nor any third-party model weights, which remain
+subject to their own licenses.
+
+
+Grant
+-----
+
+Benchmark result data is made available under the Creative Commons Attribution 4.0
+International license (CC BY 4.0):
+
+    https://creativecommons.org/licenses/by/4.0/
+
+You are free to share and adapt the data for any purpose, including commercially, provided
+you give appropriate credit, link to the license, and indicate whether changes were made.
+
+Attribution should read: "Data from LocalMax (localmax.net), CC BY 4.0."
+
+
+Contributor grant
+-----------------
+
+By submitting a benchmark result you represent that you ran the benchmark on hardware you
+control or are authorised to benchmark, and you irrevocably license the submitted measured
+data, system configuration data, and evidence artifacts to the public under CC BY 4.0.
+
+You retain no confidentiality expectation in a submitted result. Do not submit a result
+from a system whose configuration you are not permitted to disclose, such as unreleased
+hardware under embargo.
+
+
+Accuracy disclaimer
+-------------------
+
+Results are contributed by the public and are provided "as is", without warranty of any
+kind. A verification state describes the completeness and internal consistency of the
+evidence accompanying a result. It is not a certification of accuracy, and it does not
+establish that the submitting operator was honest. Do not rely on this data as the sole
+basis for a purchasing, engineering, or publication decision.
+
+
+Removal
+-------
+
+The project may remove or annotate any result that is fraudulent, violates a third-party
+license, or exposes personal data. Contributors may request removal of their own results
+as described in PRIVACY.md.

@@ -1,0 +1,93 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  typescript:
+    name: TypeScript
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Generate worker assets
+        run: node scripts/build-worker-assets.mjs
+      - name: Typecheck the API
+        run: npx tsc --noEmit -p apps/api/tsconfig.json
+      - name: Build the website
+        run: npm run build --workspace apps/web
+      - name: Client JavaScript budget
+        run: node scripts/check-js-budget.mjs
+
+  python:
+    name: Python
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: npm ci
+      # The contract tests execute the TypeScript implementations directly to pin the
+      # Python runner against them, so both toolchains are needed here.
+      - run: node scripts/build-worker-assets.mjs
+      - run: python -m pip install --upgrade pip && pip install -e ".[dev]"
+      - run: ruff check src tests
+      - run: pytest -q
+
+  contracts:
+    name: Profiles and schemas
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Validate every profile against the schema
+        run: node scripts/validate-profiles.mjs
+      - name: Validate every accepted result against the schema
+        run: node scripts/validate-results.mjs
+      - name: A frozen profile must never change
+        run: node scripts/check-frozen-profiles.mjs
+
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Refuse a committed credential
+        run: |
+          set -euo pipefail
+          # `.cloudflare` holds a live API token and must never be committed.
+          if git ls-files --error-unmatch .cloudflare >/dev/null 2>&1; then
+            echo "::error::.cloudflare is tracked by git. Rotate that token immediately."
+            exit 1
+          fi
+          if git grep -nIE '(cfat_[A-Za-z0-9]{20,}|hf_[A-Za-z0-9]{30,}|gh[pousr]_[A-Za-z0-9]{30,}|BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY)' \
+               -- . ':!*.lock' ':!package-lock.json' ':!**/test_*.py' ':!apps/api/src/lib/validation.ts'; then
+            echo "::error::A credential pattern is present in tracked files."
+            exit 1
+          fi

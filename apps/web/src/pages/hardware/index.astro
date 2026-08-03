@@ -1,0 +1,117 @@
+---
+import Layout from "../../components/Layout.astro";
+import { api, type GpuSummary } from "../../lib/api";
+import { TIER_LABEL, bytes, compact, num, short } from "../../lib/format";
+
+const data = await api<{
+  gpus: GpuSummary[];
+  unregistered: Array<{ key: string; name: string; result_count: number }>;
+}>("/v1/hardware");
+
+const gpus = data?.gpus ?? [];
+const unregistered = data?.unregistered ?? [];
+
+const classes = ["entry", "enthusiast", "frontier"] as const;
+const CLASS_NOTE: Record<string, string> = {
+  entry: "12–17 GB. Runs the Entry tier.",
+  enthusiast: "24–48 GB. Runs Entry and Enthusiast.",
+  frontier: "64 GB and up, including unified memory. Runs all three tiers.",
+};
+---
+
+<Layout title="Hardware" description="Every GPU LocalMax recognises, with the benchmark tiers it qualifies for and how many results it has.">
+  <section class="wrap" style="padding:48px 0 0">
+    <div class="eyebrow">Hardware</div>
+    <h1 style="margin:12px 0 14px;font-size:2.1rem">Supported GPUs</h1>
+    <p class="lede">
+      Tier eligibility is computed from total VRAM across a system, not from a single card,
+      so two RTX PRO 6000s reach Frontier the same way a DGX Spark does.
+    </p>
+  </section>
+
+  {classes.map((cls) => {
+    const list = gpus.filter((g) => g.class === cls);
+    if (list.length === 0) return null;
+    return (
+      <section class="section wrap">
+        <div class="section-head">
+          <h2>{TIER_LABEL[cls]} class</h2>
+          <span class="muted" style="font-size:13px">{CLASS_NOTE[cls]}</span>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>GPU</th>
+                <th class="num">VRAM</th>
+                <th class="num">Bandwidth</th>
+                <th class="num">TDP</th>
+                <th>Architecture</th>
+                <th>Lanes</th>
+                <th>Tiers</th>
+                <th class="num">Results</th>
+              </tr>
+            </thead>
+            <tbody>
+              {list.map((g) => (
+                <tr>
+                  <td class="primary"><a href={`/hardware/${g.key}`}>{short(g.name)}</a></td>
+                  <td class="num dim">{bytes(g.vram_bytes)}</td>
+                  <td class="num dim">{num(g.memory_bandwidth_gb_s, 0)} GB/s</td>
+                  <td class="num dim">{g.default_power_limit_w} W</td>
+                  <td class="dim">{g.architecture}{g.memory_type === "unified" ? " · unified" : ""}</td>
+                  <td class="dim">
+                    BF16 · INT4{g.supports_nvfp4 ? " · NVFP4" : ""}
+                  </td>
+                  <td class="dim">{g.eligible_tiers.map((t) => TIER_LABEL[t]).join(", ")}</td>
+                  <td class="num">{g.result_count > 0 ? compact(g.result_count) : <span class="muted">—</span>}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    );
+  })}
+
+  {unregistered.length > 0 && (
+    <section class="section wrap">
+      <div class="section-head">
+        <h2>Seen but not yet in the registry</h2>
+      </div>
+      <p class="lede">
+        These GPUs appear in submitted results but have no verified specification on file, so
+        they are excluded from any bandwidth-normalised view until someone adds them with a
+        manufacturer citation.
+      </p>
+      <div class="table-scroll" style="margin-top:16px">
+        <table>
+          <thead><tr><th>Reported name</th><th class="num">Results</th></tr></thead>
+          <tbody>
+            {unregistered.map((g) => (
+              <tr><td><a href={`/hardware/${g.key}`}>{g.name}</a></td><td class="num dim">{g.result_count}</td></tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )}
+
+  <section class="section wrap">
+    <div class="panel" style="max-width:var(--measure)">
+      <h3>A note on DGX Spark</h3>
+      <p style="margin-top:10px">
+        GB10 is an aarch64 system with 128 GB of LPDDR5X shared between CPU and GPU. It has
+        enormous capacity and modest bandwidth, which is exactly the profile the tier system
+        exists to represent: expect it to hold models nothing else here can, and to trail
+        discrete cards on decode throughput.
+      </p>
+      <p style="margin-bottom:0">
+        Its power telemetry is measured at the SoC module, not a GPU board. Those are
+        different physical quantities, so a Spark result is never ranked for energy against a
+        discrete card — the wattage is shown, clearly labelled, and left out of the
+        efficiency view.
+      </p>
+    </div>
+  </section>
+</Layout>

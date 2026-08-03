@@ -1,0 +1,145 @@
+name: Containers
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version, e.g. 0.1.0"
+        required: true
+
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+  attestations: write
+
+env:
+  REGISTRY: ghcr.io
+  OWNER: pavel4ai
+
+jobs:
+  base:
+    name: Base image
+    runs-on: ubuntu-latest
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+      version: ${{ steps.version.outputs.value }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: version
+        run: echo "value=${{ github.event.inputs.version || github.ref_name }}" | tr -d 'v' >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: containers/base.Dockerfile
+          # arm64 is built from the first release: DGX Spark is GB10/aarch64, and adding it
+          # later would mean re-signing the whole image line.
+          platforms: linux/amd64,linux/arm64
+          push: true
+          provenance: mode=max
+          sbom: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.OWNER }}/localmax-base:${{ steps.version.outputs.value }}
+            ${{ env.REGISTRY }}/${{ env.OWNER }}/localmax-base:latest
+          build-args: LOCALMAX_VERSION=${{ steps.version.outputs.value }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  images:
+    name: ${{ matrix.image }}
+    needs: base
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: llm
+            dockerfile: containers/llm.Dockerfile
+          - image: vision
+            dockerfile: containers/llm.Dockerfile
+          - image: diffusion
+            dockerfile: containers/diffusion.Dockerfile
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: sigstore/cosign-installer@v3
+
+      - id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          provenance: mode=max
+          sbom: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.OWNER }}/localmax-${{ matrix.image }}:${{ needs.base.outputs.version }}
+            ${{ env.REGISTRY }}/${{ env.OWNER }}/localmax-${{ matrix.image }}:latest
+          build-args: |
+            BASE_IMAGE=${{ env.REGISTRY }}/${{ env.OWNER }}/localmax-base:${{ needs.base.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Keyless signing. A result reaches Verified only if its recorded digest is one the
+      # project actually published, so this signature is what that check rests on.
+      - name: Sign
+        run: |
+          cosign sign --yes \
+            "${REGISTRY}/${OWNER}/localmax-${{ matrix.image }}@${{ steps.build.outputs.digest }}"
+
+      - uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.OWNER }}/localmax-${{ matrix.image }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
+
+      - name: Record the released digest
+        run: |
+          node scripts/record-release.mjs \
+            --image "${REGISTRY}/${OWNER}/localmax-${{ matrix.image }}" \
+            --tag "${{ needs.base.outputs.version }}" \
+            --digest "${{ steps.build.outputs.digest }}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: released-${{ matrix.image }}
+          path: containers/released-images.json
+
+  publish-digests:
+    name: Publish released digests
+    needs: images
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: /tmp/digests
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Merge and commit
+        run: |
+          node scripts/merge-releases.mjs /tmp/digests
+          git config user.name "localmax-release"
+          git config user.email "release@localmax.net"
+          git add containers/released-images.json
+          git diff --staged --quiet || git commit -m "release: record signed image digests"
+          git push

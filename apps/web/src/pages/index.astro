@@ -1,0 +1,173 @@
+---
+import Layout from "../components/Layout.astro";
+import ResultTable from "../components/ResultTable.astro";
+import StatTile from "../components/StatTile.astro";
+import { api, type ProfileSummary, type ResultRow } from "../lib/api";
+import { CATEGORY_LABEL, LANE_LABEL, TIER_LABEL, TIER_VRAM, compact, num } from "../lib/format";
+
+const [stats, profileData] = await Promise.all([
+  api<{
+    totals: { results: number; ranked: number; gpus: number; systems: number; profiles: number } | null;
+    by_category: Array<{ category: string; n: number }>;
+    recent: ResultRow[];
+  }>("/v1/stats"),
+  api<{ profiles: ProfileSummary[] }>("/v1/profiles"),
+]);
+
+const totals = stats?.totals ?? { results: 0, ranked: 0, gpus: 0, systems: 0, profiles: 0 };
+const recent = stats?.recent ?? [];
+const profiles = profileData?.profiles ?? [];
+
+const tiers = ["entry", "enthusiast", "frontier"] as const;
+const CATEGORY_ORDER = ["llm", "vision", "diffusion"];
+const byTier = (t: string) =>
+  profiles
+    .filter((p) => p.tier === t && p.lane === "base")
+    .sort((a, b) => CATEGORY_ORDER.indexOf(a.category) - CATEGORY_ORDER.indexOf(b.category));
+
+const TIER_BLURB: Record<string, string> = {
+  entry:
+    "Every supported GPU runs this, from an RTX 3060 12 GB up. It is the one leaderboard that spans the whole hardware range.",
+  enthusiast:
+    "Sized to fill 24 GB. The 3090 / 4090 / 5090 class, and the tier where the quantization lanes start to diverge sharply.",
+  frontier:
+    "Sized to fill 64 GB and up. DGX Spark and dual RTX PRO 6000 workstations — capacity that nothing below this tier can hold.",
+};
+---
+
+<Layout title="LocalMax">
+  <section class="hero">
+    <div class="wrap">
+      <div class="eyebrow">Open benchmarks for local generative AI</div>
+      <h1>What can this hardware<br />actually do with local AI?</h1>
+      <p class="lede">
+        One command runs a pinned model, at a pinned precision, against a pinned workload, in
+        a pinned container. Everything that could move a number is frozen. Your hardware is
+        the only variable — so the numbers mean something.
+      </p>
+
+      <div class="hero-actions">
+        <a href="/run" class="btn btn-primary">Run a benchmark</a>
+        <a href="/benchmarks" class="btn">Browse the leaderboards</a>
+      </div>
+
+      <pre class="cmd"><span class="c"># 12 GB and up · about 14 minutes · no account needed</span>
+docker run --rm --gpus all -v ~/.localmax:/cache \
+  ghcr.io/pavel4ai/localmax-llm:latest run llm-entry-base</pre>
+    </div>
+  </section>
+
+  <section class="wrap" style="padding-bottom:8px">
+    <div class="grid grid-4">
+      <StatTile label="Results" value={compact(totals.results)} note={`${compact(totals.ranked)} ranked`} />
+      <StatTile label="Systems" value={compact(totals.systems)} note="distinct machines" />
+      <StatTile label="GPU models" value={compact(totals.gpus)} note="Ampere through Blackwell" />
+      <StatTile label="Profiles" value={String(profiles.length)} note="3 categories × 3 tiers × 3 lanes" />
+    </div>
+  </section>
+
+  <section class="section wrap">
+    <div class="section-head">
+      <div>
+        <h2>Three tiers, because one model cannot span 12 GB to 192 GB</h2>
+        <p class="lede" style="margin-top:8px">
+          A 4B model measured on a dual RTX PRO 6000 would leave the second card idle and
+          rank a DGX Spark below an RTX 3060. So a tier is defined by the VRAM its ranked run
+          is meant to <em>fill</em>, and each has its own fixed model.
+        </p>
+      </div>
+    </div>
+
+    <div class="grid grid-3">
+      {tiers.map((tier) => {
+        const list = byTier(tier);
+        const results = list.reduce((sum, p) => sum + p.result_count, 0);
+        return (
+          <div class="tile tier-card">
+            <div class="tile-label">{TIER_LABEL[tier]} · {TIER_VRAM[tier]}</div>
+            <div class="tier-blurb">{TIER_BLURB[tier]}</div>
+            <ul class="tier-list">
+              {list.map((p) => (
+                <li>
+                  <a href={`/benchmarks/${p.id}`}>{CATEGORY_LABEL[p.category]}</a>
+                  <span class="muted tnum">{num(p.model.parameters_b, 0)}B · {LANE_LABEL[p.lane]}</span>
+                </li>
+              ))}
+              {list.length === 0 && <li class="muted">Profiles pending release</li>}
+            </ul>
+            <div class="tile-note">{compact(results)} result{results === 1 ? "" : "s"}</div>
+          </div>
+        );
+      })}
+    </div>
+
+    <p class="muted" style="margin-top:18px;font-size:13px">
+      Each tier also has an INT4 lane (Ampere and up) and an NVFP4 lane (Blackwell only),
+      ranked separately. Comparing precisions in one table would compare different numerical
+      workloads. <a href="/methodology" class="secondary">How the lanes work →</a>
+    </p>
+  </section>
+
+  <section class="section wrap">
+    <div class="section-head">
+      <h2>Latest results</h2>
+      <a href="/results" class="secondary">All results →</a>
+    </div>
+    <ResultTable
+      results={recent}
+      emptyMessage="No results published yet. Be the first — the Entry profile runs on any 12 GB card in about fourteen minutes."
+    />
+  </section>
+
+  <section class="section wrap">
+    <div class="grid grid-3">
+      <div class="tile">
+        <div class="tile-label">Fixed</div>
+        <div class="tier-blurb">
+          Model, revision, quantization, runtime, every runtime flag, prompt set, input and
+          output token counts, image set, diffusion steps, scheduler and seeds. All hashed
+          into the profile, all checked on submission.
+        </div>
+      </div>
+      <div class="tile">
+        <div class="tile-label">Measured</div>
+        <div class="tier-blurb">
+          Decode and prefill throughput separately, TTFT, inter-token latency, seconds per
+          diffusion step, images per minute, peak VRAM, board power, joules per token,
+          thermal and power throttle events.
+        </div>
+      </div>
+      <div class="tile">
+        <div class="tile-label">Published</div>
+        <div class="tier-blurb">
+          The manifest, the raw per-request records, the telemetry trace and the system
+          report — all retrievable by content hash. Every ranked number is recomputed from
+          the raw data before it is accepted.
+        </div>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .hero { padding: 92px 0 56px; }
+  .hero h1 { margin: 14px 0 20px; }
+  .hero .lede { font-size: 1.12rem; }
+  .hero-actions { display: flex; gap: 12px; margin: 28px 0 32px; flex-wrap: wrap; }
+  .hero pre.cmd { max-width: 720px; }
+
+  .tier-card { gap: 12px; padding: 22px; }
+  .tier-blurb { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+  .tier-list { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 6px; }
+  .tier-list li {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 13px;
+    padding: 5px 0;
+    border-top: 1px solid var(--grid);
+  }
+  @media (max-width: 640px) {
+    .hero { padding: 56px 0 40px; }
+  }
+</style>

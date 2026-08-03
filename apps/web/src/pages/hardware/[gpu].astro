@@ -1,0 +1,117 @@
+---
+import BarChart, { type BarDatum } from "../../components/BarChart.astro";
+import Layout from "../../components/Layout.astro";
+import ResultTable from "../../components/ResultTable.astro";
+import SourceData from "../../components/SourceData.astro";
+import StatTile from "../../components/StatTile.astro";
+import { api, type ResultRow } from "../../lib/api";
+import { LANE_LABEL, TIER_LABEL, bytes, compact, num, short, watts } from "../../lib/format";
+
+const { gpu: gpuKey } = Astro.params;
+
+interface HardwareDetail {
+  gpu: Record<string, any>;
+  by_profile: Array<{
+    profile_id: string; category: string; tier: string; lane: string;
+    headline_metric: string; headline_unit: string; headline_direction: string;
+    samples: number; ranked: number;
+    min_value: number; max_value: number; mean_value: number;
+    mean_power: number | null; mean_vram: number | null;
+  }>;
+  results: ResultRow[];
+  eligible_tiers: string[];
+}
+
+const detail = await api<HardwareDetail>(`/v1/hardware/${gpuKey}`);
+if (!detail) return new Response(null, { status: 404, statusText: "GPU not found" });
+
+const g = detail.gpu;
+const rows = detail.by_profile;
+const results = detail.results;
+
+const bestByProfile: BarDatum[] = rows.map((p) => ({
+  label: `${TIER_LABEL[p.tier] ?? p.tier} · ${LANE_LABEL[p.lane] ?? p.lane}`,
+  value: p.headline_direction === "higher_is_better" ? p.max_value : p.min_value,
+  sublabel: p.headline_unit,
+  title: `${p.profile_id}: best ${num(p.headline_direction === "higher_is_better" ? p.max_value : p.min_value)} ${p.headline_unit} across ${p.samples} result(s)`,
+}));
+
+const totalResults = rows.reduce((s, p) => s + p.samples, 0);
+---
+
+<Layout title={short(g.name ?? gpuKey)} description={`Every LocalMax benchmark result for the ${g.name ?? gpuKey}.`}>
+  <section class="wrap" style="padding:48px 0 0">
+    <div class="eyebrow"><a href="/hardware">Hardware</a></div>
+    <h1 style="margin:12px 0 14px;font-size:2.1rem">{short(g.name ?? gpuKey)}</h1>
+    {g.architecture && (
+      <p class="lede">
+        {g.architecture} · {bytes(g.vram_bytes)} {g.memory_type === "unified" ? "unified memory" : "VRAM"}
+        {g.memory_bandwidth_gb_s ? ` · ${num(g.memory_bandwidth_gb_s, 0)} GB/s` : ""}
+        {g.default_power_limit_w ? ` · ${g.default_power_limit_w} W` : ""}
+        {" · lanes: BF16, INT4"}{g.supports_nvfp4 ? ", NVFP4" : ""}
+      </p>
+    )}
+
+    <div class="grid grid-4" style="margin-top:26px">
+      <StatTile label="Results" value={compact(totalResults)} />
+      <StatTile label="Profiles run" value={String(rows.length)} />
+      <StatTile
+        label="Eligible tiers"
+        value={detail.eligible_tiers.length ? detail.eligible_tiers.map((t) => TIER_LABEL[t]).join(", ") : "—"}
+      />
+      <StatTile
+        label="Typical power"
+        value={watts(rows.find((p) => p.mean_power)?.mean_power ?? null)}
+        note={g.memory_type === "unified" ? "SoC module" : "GPU board"}
+      />
+    </div>
+  </section>
+
+  {g.notes?.length > 0 && (
+    <section class="wrap" style="padding-top:26px">
+      <div class="panel" style="max-width:var(--measure)">
+        <div class="tile-label" style="margin-bottom:10px">About this GPU</div>
+        <ul class="notes">{g.notes.map((n: string) => <li>{n}</li>)}</ul>
+      </div>
+    </section>
+  )}
+
+  {rows.length > 0 && (
+    <section class="section wrap">
+      <div class="section-head">
+        <h2>Best result per profile</h2>
+        <span class="muted" style="font-size:13px">Units differ per profile — bars are not comparable across rows</span>
+      </div>
+      <BarChart data={bestByProfile} unit="profile units" caption="" showRank={false} />
+      <SourceData
+        columns={["Profile", "Samples", "Best", "Mean", "Unit", "Mean power (W)", "Mean peak VRAM"]}
+        rows={rows.map((p) => [
+          p.profile_id, p.samples,
+          num(p.headline_direction === "higher_is_better" ? p.max_value : p.min_value),
+          num(p.mean_value), p.headline_unit,
+          p.mean_power ? num(p.mean_power, 0) : null,
+          p.mean_vram ? bytes(p.mean_vram) : null,
+        ])}
+        filename={`localmax-${gpuKey}-profiles.csv`}
+        summary="Show every profile measured on this GPU"
+      />
+      <p class="muted" style="font-size:12.5px;margin-top:12px;max-width:var(--measure)">
+        Each row is a different workload with its own unit — tokens per second beside seconds
+        per diffusion step. The bar lengths share an axis only because they share a chart;
+        read the table for the values that matter.
+      </p>
+    </section>
+  )}
+
+  <section class="section wrap">
+    <div class="section-head">
+      <h2>All results</h2>
+      <a href={`/results?gpu=${gpuKey}`} class="secondary">Filter the full list →</a>
+    </div>
+    <ResultTable results={results} emptyMessage="No results submitted for this GPU yet." />
+  </section>
+</Layout>
+
+<style>
+  .notes { margin: 0; padding-left: 18px; display: grid; gap: 9px; font-size: 13px; color: var(--text-secondary); }
+</style>

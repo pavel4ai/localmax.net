@@ -1,0 +1,106 @@
+---
+const year = new Date().getUTCFullYear();
+const columns = [
+  {
+    title: "Benchmarks",
+    links: [
+      { href: "/benchmarks", label: "All profiles" },
+      { href: "/results", label: "All results" },
+      { href: "/hardware", label: "Hardware" },
+      { href: "/compare", label: "Compare systems" },
+    ],
+  },
+  {
+    title: "Run",
+    links: [
+      { href: "/run", label: "Run a benchmark" },
+      { href: "/methodology", label: "Methodology" },
+      { href: "/releases", label: "Releases" },
+    ],
+  },
+  {
+    title: "Open",
+    links: [
+      { href: "/data", label: "Download the data" },
+      { href: "https://github.com/pavel4ai/localmax.net", label: "Source on GitHub" },
+      { href: "https://github.com/pavel4ai/localmax.net/tree/main/results", label: "Result archive" },
+    ],
+  },
+  {
+    title: "Trust",
+    links: [
+      { href: "/privacy", label: "Privacy" },
+      { href: "https://github.com/pavel4ai/localmax.net/blob/main/SECURITY.md", label: "Security" },
+      { href: "https://github.com/pavel4ai/localmax.net/blob/main/LICENSE-DATA", label: "Data licence" },
+    ],
+  },
+];
+---
+
+<footer>
+  <div class="wrap">
+    <div class="cols">
+      <div class="about">
+        <div class="brand">LocalMax</div>
+        <p>
+          Open benchmarks for local generative AI. Every result is a signed artifact produced
+          by a pinned container, with its raw evidence published alongside it.
+        </p>
+      </div>
+      {columns.map((col) => (
+        <div>
+          <div class="eyebrow">{col.title}</div>
+          <ul>
+            {col.links.map((l) => <li><a href={l.href}>{l.label}</a></li>)}
+          </ul>
+        </div>
+      ))}
+    </div>
+    <div class="base">
+      <span>© {year} LocalMax contributors · Code Apache-2.0 · Data CC BY 4.0</span>
+      <span class="muted">
+        Verified describes protocol compliance and evidence consistency. It is not proof that an operator was honest.
+      </span>
+    </div>
+  </div>
+</footer>
+
+<style>
+  footer {
+    border-top: 1px solid var(--border);
+    margin-top: 72px;
+    padding: 48px 0 40px;
+    font-size: 13px;
+  }
+  .cols {
+    display: grid;
+    grid-template-columns: 2fr repeat(4, 1fr);
+    gap: 32px;
+  }
+  .about .brand {
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    margin-bottom: 10px;
+    font-size: 14px;
+  }
+  .about p { font-size: 13px; max-width: 34ch; color: var(--text-muted); }
+  ul { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 7px; }
+  a { color: var(--text-muted); }
+  a:hover { color: var(--text-primary); }
+  .base {
+    display: flex;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .base .muted { max-width: 52ch; }
+  @media (max-width: 900px) {
+    .cols { grid-template-columns: repeat(2, 1fr); }
+    .about { grid-column: 1 / -1; }
+  }
+</style>

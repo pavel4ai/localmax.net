@@ -1,0 +1,1 @@
+From this document, extract the invoice total and the invoice date. Output them as: TOTAL=<value> DATE=<YYYY-MM-DD>

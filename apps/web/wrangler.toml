@@ -1,0 +1,40 @@
+name = "localmax-web"
+compatibility_date = "2025-01-15"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = false
+
+# All top-level keys must precede the first table, or TOML nests them into it.
+routes = [
+  { pattern = "localmax.net", custom_domain = true },
+  { pattern = "www.localmax.net", custom_domain = true }
+]
+
+# The Astro Cloudflare adapter generates the worker entry and asset manifest into
+# dist/_worker.js/wrangler.json at build time and merges this file's bindings into it.
+# Deploy with:  astro build && wrangler deploy -c dist/_worker.js/wrangler.json
+
+[observability]
+enabled = true
+
+[vars]
+ENVIRONMENT = "production"
+# Fallback only. In production the service binding below is used instead.
+API_ORIGIN = "https://api.localmax.net"
+
+# Same-colo, no network hop, no CORS, and the API Worker never has to be publicly
+# reachable for the site to render.
+[[services]]
+binding = "API"
+service = "localmax-api"
+
+[env.staging]
+name = "localmax-web-staging"
+workers_dev = true
+
+[env.staging.vars]
+ENVIRONMENT = "staging"
+API_ORIGIN = "https://localmax-api-staging.workers.dev"
+
+[[env.staging.services]]
+binding = "API"
+service = "localmax-api-staging"

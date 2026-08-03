@@ -1,0 +1,133 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://localmax.net/schemas/common.schema.json",
+  "title": "LocalMax shared definitions",
+  "$defs": {
+    "semver": {
+      "type": "string",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-[0-9A-Za-z-.]+)?$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$",
+      "description": "Lowercase hex SHA-256, prefixed."
+    },
+    "runId": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$",
+      "description": "Crockford base32 ULID. Lexicographically sortable by creation time."
+    },
+    "category": {
+      "type": "string",
+      "enum": ["llm", "vision", "diffusion"]
+    },
+    "tier": {
+      "type": "string",
+      "enum": ["entry", "enthusiast", "frontier"],
+      "description": "Defined by the VRAM the ranked run is meant to fill: 12 / 24 / 64 GB."
+    },
+    "lane": {
+      "type": "string",
+      "enum": ["base", "int4", "nvfp4", "fp8"],
+      "description": "Quantization lane. 'base' is BF16/FP16 and is the universal ranked lane. 'fp8' is reserved; no v1 profile uses it."
+    },
+    "precision": {
+      "type": "string",
+      "enum": ["bf16", "fp16", "fp8_e4m3", "nvfp4", "int4_awq", "int4_gptq", "int8"]
+    },
+    "parallelism": {
+      "type": "string",
+      "enum": ["none", "tp2", "tp4", "tp8", "pp2"],
+      "description": "Ranked separately. 'none' means a single GPU."
+    },
+    "architecture": {
+      "type": "string",
+      "enum": ["ampere", "ada", "hopper", "blackwell", "blackwell-gb10"]
+    },
+    "cpuArch": {
+      "type": "string",
+      "enum": ["x86_64", "aarch64"]
+    },
+    "memoryType": {
+      "type": "string",
+      "enum": ["discrete", "unified"],
+      "description": "'unified' covers GB10-class systems where GPU and CPU share LPDDR."
+    },
+    "powerDomain": {
+      "type": "string",
+      "enum": ["gpu_board", "soc_module", "unavailable"],
+      "description": "What the reported wattage physically measures. gpu_board and soc_module are NOT comparable and are never ranked against one another."
+    },
+    "verification": {
+      "type": "string",
+      "enum": ["community", "verified", "rejected", "flagged"]
+    },
+    "workloadStatus": {
+      "type": "string",
+      "enum": ["passed", "failed", "skipped", "oom", "timeout"]
+    },
+    "metricMap": {
+      "type": "object",
+      "description": "snake_case metric names carrying an explicit unit suffix.",
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_]*_(ms|s|tok_s|req_s|img_s|img_min|frame_s|gb_s|bytes|w|j|c|pct|count|ratio)$"
+      },
+      "additionalProperties": {
+        "type": ["number", "null"]
+      }
+    },
+    "percentiles": {
+      "type": "object",
+      "properties": {
+        "p50": { "type": "number" },
+        "p90": { "type": "number" },
+        "p95": { "type": "number" },
+        "p99": { "type": "number" },
+        "min": { "type": "number" },
+        "max": { "type": "number" },
+        "mean": { "type": "number" },
+        "stddev": { "type": "number" }
+      },
+      "required": ["p50", "p95", "mean"],
+      "additionalProperties": false
+    },
+    "artifact": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$",
+          "description": "Flat name. No path separators; nothing is ever unpacked."
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "raw_records",
+            "telemetry",
+            "system_report",
+            "runtime_log",
+            "adapter_log",
+            "sample_image",
+            "quality_report"
+          ]
+        },
+        "hash": { "$ref": "#/$defs/sha256" },
+        "size_bytes": { "type": "integer", "minimum": 1, "maximum": 67108864 },
+        "media_type": {
+          "type": "string",
+          "enum": [
+            "application/json",
+            "application/x-ndjson",
+            "application/gzip",
+            "text/plain",
+            "image/webp",
+            "image/png"
+          ]
+        },
+        "required": { "type": "boolean", "default": true }
+      },
+      "required": ["name", "kind", "hash", "size_bytes", "media_type"],
+      "additionalProperties": false
+    }
+  }
+}

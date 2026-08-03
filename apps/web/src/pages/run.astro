@@ -1,0 +1,151 @@
+---
+import Layout from "../components/Layout.astro";
+import { api, type ProfileSummary } from "../lib/api";
+import { LANE_LABEL, TIER_LABEL, bytes, num } from "../lib/format";
+
+const data = await api<{ profiles: ProfileSummary[] }>("/v1/profiles");
+const profiles = (data?.profiles ?? []).filter((p) => p.lane === "base");
+---
+
+<Layout title="Run a benchmark" description="How to run a LocalMax benchmark on your own hardware and publish the result.">
+  <section class="wrap" style="padding:48px 0 0">
+    <div class="eyebrow">Run</div>
+    <h1 style="margin:12px 0 16px;font-size:2.1rem">Run a benchmark</h1>
+    <p class="lede">
+      One container, one command. No account, no GitHub token, no email address. You see the
+      exact manifest before anything leaves your machine.
+    </p>
+  </section>
+
+  <section class="section wrap">
+    <h2>1. Check your system</h2>
+    <p style="margin-top:10px">
+      Linux with the NVIDIA driver and Container Toolkit installed. x86_64 or aarch64 —
+      DGX Spark is supported natively. WSL2 works but is marked experimental, and results
+      from it are labelled as such.
+    </p>
+    <pre class="cmd"><span class="c"># Reports driver, CUDA, GPU, disk, RAM and which profiles you qualify for</span>
+docker run --rm --gpus all ghcr.io/pavel4ai/localmax-llm:latest doctor</pre>
+  </section>
+
+  <section class="section wrap">
+    <h2>2. Pick a profile</h2>
+    <p style="margin-top:10px">
+      Pick the highest tier your total VRAM supports. Running a lower tier as well is
+      useful — it is how a system gets comparable across the whole range.
+    </p>
+    <div class="table-scroll" style="margin-top:18px">
+      <table>
+        <thead>
+          <tr>
+            <th>Profile</th><th>Tier</th><th class="num">Min VRAM</th><th>Model</th>
+            <th class="num">Download</th><th class="num">Run time</th>
+          </tr>
+        </thead>
+        <tbody>
+          {profiles.map((p) => (
+            <tr>
+              <td class="primary"><a href={`/benchmarks/${p.id}`}>{p.id}</a></td>
+              <td class="dim">{TIER_LABEL[p.tier]} · {LANE_LABEL[p.lane]}</td>
+              <td class="num dim">{bytes(p.requirements.min_vram_bytes)}</td>
+              <td class="dim">{num(p.model.parameters_b, 0)}B {p.model.precision}</td>
+              <td class="num dim">{bytes(p.requirements.expected_download_bytes as number)}</td>
+              <td class="num dim">{p.requirements.expected_runtime_minutes ? `~${p.requirements.expected_runtime_minutes} min` : "—"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    <p class="muted" style="margin-top:12px;font-size:13px">
+      INT4 and NVFP4 lanes exist for each tier and are listed on the
+      <a href="/benchmarks" class="secondary">profile matrix</a>. They fit a larger model in
+      the same VRAM and are ranked separately.
+    </p>
+  </section>
+
+  <section class="section wrap">
+    <h2>3. Run it</h2>
+    <pre class="cmd"><span class="c"># Weights are cached in ~/.localmax and reused across profiles</span>
+docker run --rm --gpus all -v ~/.localmax:/cache \
+  ghcr.io/pavel4ai/localmax-llm:latest run llm-entry-base
+
+<span class="c"># Vision and diffusion use their own images</span>
+docker run --rm --gpus all -v ~/.localmax:/cache \
+  ghcr.io/pavel4ai/localmax-vision:latest run vision-entry-base
+
+docker run --rm --gpus all -v ~/.localmax:/cache \
+  ghcr.io/pavel4ai/localmax-diffusion:latest run diffusion-entry-base</pre>
+    <p style="margin-top:16px">
+      The container starts the pinned inference runtime, waits for it to become ready, runs a
+      warm-up, then drives the endpoint with the fixed workload while sampling GPU telemetry.
+      Close other GPU work first — the runner records what it sees, including your browser.
+    </p>
+  </section>
+
+  <section class="section wrap">
+    <h2>4. Inspect before you publish</h2>
+    <p style="margin-top:10px">
+      Nothing is transmitted until you accept it. <code>inspect</code> works entirely offline
+      and prints the manifest and every artifact that would be uploaded.
+    </p>
+    <pre class="cmd">docker run --rm -v ~/.localmax:/cache \
+  ghcr.io/pavel4ai/localmax-llm:latest inspect LAST</pre>
+    <div class="grid grid-2" style="margin-top:22px">
+      <div class="tile">
+        <div class="tile-label">Collected</div>
+        <div class="body">
+          GPU model, VRAM, driver, CUDA, PCIe link, power limit and clocks; CPU model and core
+          count; RAM; OS and kernel; every measured metric, the raw per-request records, and
+          the telemetry trace.
+        </div>
+      </div>
+      <div class="tile">
+        <div class="tile-label">Never collected</div>
+        <div class="body">
+          Hostname, username, filesystem paths, GPU serial numbers or board UUIDs, MAC
+          addresses, environment variables, or anything about unrelated processes. Logs are
+          redacted locally before they are written.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section wrap">
+    <h2>5. Submit</h2>
+    <pre class="cmd">docker run --rm -v ~/.localmax:/cache \
+  ghcr.io/pavel4ai/localmax-llm:latest submit LAST</pre>
+    <p style="margin-top:16px">
+      The CLI prints a short verification link. Open it, complete a one-click browser check,
+      and the upload proceeds. That check is the only thing standing between an anonymous
+      contributor and the leaderboard — it exists to make bulk fabrication expensive, not to
+      identify you.
+    </p>
+    <p>
+      Your result appears within a minute or two. It is validated asynchronously: every
+      derived metric is recomputed from your raw records before it is accepted, and the
+      finding list on your result page tells you exactly what passed.
+    </p>
+  </section>
+
+  <section class="section wrap">
+    <div class="panel" style="max-width:var(--measure)">
+      <h3>If something fails</h3>
+      <p style="margin-top:10px">
+        An out-of-memory failure on a 12 GB card is a legitimate result and is worth
+        submitting: it records that this profile does not fit that configuration, which is
+        information the leaderboard needs. The runner marks the workload failed rather than
+        silently retrying with different settings.
+      </p>
+      <p style="margin-bottom:0">
+        Report problems at
+        <a href="https://github.com/pavel4ai/localmax.net/issues">github.com/pavel4ai/localmax.net/issues</a>
+        with the run ID.
+      </p>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .body { font-size: 13px; color: var(--text-secondary); line-height: 1.55; margin-top: 8px; }
+  .tile { padding: 20px; }
+</style>

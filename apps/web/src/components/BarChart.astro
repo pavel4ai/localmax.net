@@ -1,0 +1,98 @@
+---
+import { barPath, linearScale, axisFormat } from "../lib/chart";
+
+export interface BarDatum {
+  label: string;
+  value: number;
+  sublabel?: string;
+  href?: string;
+  highlight?: boolean;
+  color?: string;
+  title?: string;
+}
+
+interface Props {
+  data: BarDatum[];
+  unit: string;
+  caption?: string;
+  /** Lower-is-better metrics still draw longest-first; the caption states the direction. */
+  direction?: "higher_is_better" | "lower_is_better";
+  max?: number;
+  showRank?: boolean;
+}
+
+const { data, unit, caption, direction = "higher_is_better", max, showRank = true } = Astro.props;
+
+const ROW = 30;
+const BAR = 16;
+const LEFT = 236;
+const RIGHT = 88;
+const TOP = 22;
+const W = 1000;
+const H = TOP + data.length * ROW + 10;
+
+const domainMax = max ?? Math.max(0, ...data.map((d) => d.value));
+const x = linearScale([0, domainMax * 1.02 || 1], [LEFT, W - RIGHT]);
+const ticks = x.ticks(4);
+const better = direction === "higher_is_better" ? "higher is better" : "lower is better";
+---
+
+{data.length === 0 ? (
+  <div class="empty">No results yet for this view.</div>
+) : (
+  <figure>
+    <svg
+      class="chart"
+      viewBox={`0 0 ${W} ${H}`}
+      role="img"
+      aria-label={caption ?? `Bar chart, ${unit}, ${better}`}
+      preserveAspectRatio="xMinYMin meet"
+    >
+      {/* Gridlines sit behind the marks and stay recessive. */}
+      {ticks.map((t) => (
+        <g>
+          <line class="grid-line" x1={x(t)} y1={TOP - 6} x2={x(t)} y2={H - 10} />
+          <text class="axis-label" x={x(t)} y={TOP - 11} text-anchor="middle">{axisFormat(t)}</text>
+        </g>
+      ))}
+      <line class="baseline" x1={LEFT} y1={TOP - 6} x2={LEFT} y2={H - 10} />
+
+      {data.map((d, i) => {
+        const y = TOP + i * ROW + (ROW - BAR) / 2;
+        const end = x(Math.max(0, d.value));
+        const fill = d.color ?? (d.highlight ? "var(--accent)" : "var(--series-1)");
+        return (
+          <g>
+            {showRank && (
+              <text class="value-label" x={20} y={y + BAR / 2 + 4} text-anchor="end" opacity="0.55">
+                {i + 1}
+              </text>
+            )}
+            <text
+              x={28}
+              y={y + BAR / 2 + 4}
+              fill="var(--text-secondary)"
+              font-size="12.5"
+              style={d.highlight ? "font-weight:600;fill:var(--text-primary)" : ""}
+            >
+              {d.label.length > 34 ? d.label.slice(0, 33) + "…" : d.label}
+            </text>
+            {d.sublabel && (
+              <text class="value-label" x={LEFT - 10} y={y + BAR / 2 + 4} text-anchor="end" opacity="0.6">
+                {d.sublabel}
+              </text>
+            )}
+            <path d={barPath(LEFT, y, end, BAR, 4)} fill={fill} opacity={d.highlight ? 1 : 0.85}>
+              <title>{d.title ?? `${d.label}: ${d.value} ${unit}`}</title>
+            </path>
+            {/* Direct value label: the reader never has to trace a bar back to an axis. */}
+            <text class="value-label" x={end + 9} y={y + BAR / 2 + 4}>
+              {axisFormat(d.value)}
+            </text>
+          </g>
+        );
+      })}
+    </svg>
+    {caption && <figcaption>{caption} Values in {unit}; {better}.</figcaption>}
+  </figure>
+)}

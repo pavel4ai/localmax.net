@@ -1,0 +1,40 @@
+---
+interface Props {
+  verification: string;
+  ranked?: number | boolean;
+  compact?: boolean;
+}
+const { verification, ranked, compact = false } = Astro.props;
+
+const LABEL: Record<string, string> = {
+  verified: "Verified",
+  community: "Community",
+  flagged: "Flagged",
+  rejected: "Rejected",
+};
+
+const TITLE: Record<string, string> = {
+  verified:
+    "Official signed image, frozen profile, complete evidence, telemetry coverage met, and every derived metric recomputed from the raw records.",
+  community:
+    "Valid manifest and signature, but the evidence is incomplete or the image is not an official release. Published in full; never ranked.",
+  flagged:
+    "At least one value falls outside the expected range for this hardware. Held for review; nothing about the submission has been altered.",
+  rejected: "Failed validation. Not published.",
+};
+
+const isRanked = ranked === 1 || ranked === true;
+const showUnranked = !compact && verification !== "rejected" && !isRanked;
+---
+
+<span class={`badge badge-${verification}`} title={TITLE[verification]}>
+  <span class="dot" aria-hidden="true"></span>{LABEL[verification] ?? verification}
+</span>
+{showUnranked && (
+  <span
+    class="badge badge-unranked"
+    title="Published with every raw value intact, but excluded from the rank because a profile gate was not met."
+  >
+    <span class="dot" aria-hidden="true"></span>Unranked
+  </span>
+)}

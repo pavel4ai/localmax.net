@@ -1,0 +1,185 @@
+{
+  "$schema": "../../schemas/profile.schema.json",
+  "schema_version": "1.0.0",
+  "id": "diffusion-entry-base",
+  "version": "0.1.0",
+  "frozen": false,
+  "published": false,
+  "display_name": "Diffusion \u00b7 Entry \u00b7 BF16",
+  "summary": "A 4B-class model at BF16 on 12 GB. The universal baseline: every supported NVIDIA GPU from an RTX 3060 12 GB upward runs this identically, so it is the one leaderboard that spans the whole hardware range.",
+  "category": "diffusion",
+  "tier": "entry",
+  "lane": "base",
+  "requirements": {
+    "min_vram_bytes": 12884901888,
+    "min_system_ram_bytes": 17179869184,
+    "min_disk_bytes": 34359738368,
+    "min_driver": "550.54",
+    "min_compute_capability": "8.0",
+    "architectures": [
+      "ampere",
+      "ada",
+      "blackwell",
+      "blackwell-gb10",
+      "hopper"
+    ],
+    "platforms": [
+      "linux/amd64",
+      "linux/arm64"
+    ],
+    "gpu_count": [
+      1
+    ],
+    "expected_runtime_minutes": 14,
+    "expected_download_bytes": 7516192768
+  },
+  "model": {
+    "repository": "stabilityai/stable-diffusion-xl-base-1.0",
+    "revision": "PENDING",
+    "precision": "bf16",
+    "parameters_b": 3.5,
+    "weights_bytes": 7516192768,
+    "license": "CreativeML-Open-RAIL-M++",
+    "files": []
+  },
+  "runtime": {
+    "name": "diffusers",
+    "version": "PENDING",
+    "harness": "diffusion-adapter",
+    "harness_version": "PENDING",
+    "server_ready_timeout_s": 900,
+    "flags": {
+      "torch_dtype": "float16",
+      "enable_attention_slicing": false,
+      "enable_vae_slicing": false,
+      "enable_model_cpu_offload": false,
+      "torch_compile": false
+    },
+    "flag_overrides_allowed": []
+  },
+  "workloads": [
+    {
+      "id": "t2i_1024",
+      "kind": "diffusion_t2i",
+      "required_for_rank": true,
+      "warmup_requests": 1,
+      "measured_requests": 12,
+      "timeout_s": 1800,
+      "config": {
+        "width": 1024,
+        "height": 1024,
+        "steps": 30,
+        "scheduler": "DPMSolverMultistep",
+        "guidance_scale": 5.0,
+        "batch_size": 1,
+        "prompt_file": "assets/diffusion/prompts.json",
+        "seeds": [
+          1101,
+          2202,
+          3303,
+          4404
+        ],
+        "vae_precision": "fp16",
+        "attention": "sdpa",
+        "cpu_offload": false,
+        "compile": false
+      }
+    }
+  ],
+  "ranking": {
+    "metric": "seconds_per_step_s",
+    "unit": "s/step",
+    "direction": "lower_is_better",
+    "source_workload": "t2i_1024",
+    "secondary": [
+      {
+        "metric": "throughput_img_min",
+        "label": "Images / min",
+        "unit": "img/min",
+        "direction": "higher_is_better",
+        "source_workload": "t2i_1024"
+      },
+      {
+        "metric": "generation_p50_s",
+        "label": "Per image p50",
+        "unit": "s",
+        "direction": "lower_is_better",
+        "source_workload": "t2i_1024"
+      },
+      {
+        "metric": "generation_p95_s",
+        "label": "Per image p95",
+        "unit": "s",
+        "direction": "lower_is_better",
+        "source_workload": "t2i_1024"
+      },
+      {
+        "metric": "energy_per_image_j",
+        "label": "Energy / image",
+        "unit": "J",
+        "direction": "lower_is_better",
+        "source_workload": "t2i_1024"
+      },
+      {
+        "metric": "model_load_s",
+        "label": "Pipeline load",
+        "unit": "s",
+        "direction": "lower_is_better",
+        "source_workload": "t2i_1024"
+      }
+    ],
+    "gates": [
+      {
+        "metric": "error_ratio",
+        "comparator": "lte",
+        "value": 0.0,
+        "source_workload": "t2i_1024",
+        "reason": "Any failed generation invalidates the measurement."
+      },
+      {
+        "metric": "offload_ratio",
+        "comparator": "lte",
+        "value": 0.0,
+        "source_workload": "t2i_1024",
+        "reason": "CPU offload turns this into a system benchmark and is not comparable."
+      }
+    ]
+  },
+  "validation": {
+    "required_artifacts": [
+      "raw_records",
+      "telemetry",
+      "system_report",
+      "adapter_log",
+      "sample_image"
+    ],
+    "telemetry_interval_ms": 100,
+    "min_telemetry_coverage_pct": 99.0,
+    "metric_recompute_tolerance_pct": 0.5,
+    "max_repeat_cv_pct": 3.0,
+    "plausibility": {
+      "seconds_per_step_s": {
+        "min": 0.001,
+        "max": 120
+      },
+      "throughput_img_min": {
+        "min": 0.01,
+        "max": 600
+      },
+      "vram_peak_bytes": {
+        "min": 1073741824,
+        "max": 206158430208
+      },
+      "power_avg_w": {
+        "min": 5,
+        "max": 1200
+      }
+    }
+  },
+  "notes": [
+    "Release candidate. Model revision and diffusers version are PENDING until the bake-off.",
+    "Ranked on seconds per denoising step: it is resolution- and step-count-normalised, so it stays comparable if a future profile changes step count. Images per minute is derived from it and is the headline shown to readers.",
+    "Diffusion is compute-bound where the LLM profiles are bandwidth-bound. This is deliberate: it is the counterweight that stops the site being one memory-bandwidth chart in three costumes.",
+    "CPU offload is disabled and gated. A run that offloads is published but never ranked, because it measures the host as much as the GPU."
+  ]
+}

@@ -1,0 +1,86 @@
+name = "localmax-api"
+main = "src/index.ts"
+compatibility_date = "2025-01-15"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = false
+
+# Public API. The website reaches this over a service binding instead of the network.
+routes = [
+  { pattern = "api.localmax.net", custom_domain = true }
+]
+
+[observability]
+enabled = true
+
+[vars]
+ENVIRONMENT = "production"
+SITE_ORIGIN = "https://localmax.net"
+API_ORIGIN = "https://api.localmax.net"
+# Max bytes accepted for one artifact and for one submission's artifacts in total.
+MAX_ARTIFACT_BYTES = "67108864"
+MAX_SUBMISSION_BYTES = "134217728"
+# Cloudflare Turnstile public site key. The secret lives in a Worker secret.
+TURNSTILE_SITE_KEY = "0x4AAAAAAA_placeholder"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "localmax"
+database_id = "PLACEHOLDER_CREATE_WITH_WRANGLER"
+migrations_dir = "migrations"
+
+[[r2_buckets]]
+binding = "EVIDENCE"
+bucket_name = "localmax-evidence"
+
+[[kv_namespaces]]
+binding = "SESSIONS"
+id = "PLACEHOLDER_CREATE_WITH_WRANGLER"
+
+# Native edge rate limiting. Cheaper and far more accurate under concurrency than KV
+# counters, which serialise on a single key.
+[[unsafe.bindings]]
+name = "SUBMIT_LIMITER"
+type = "ratelimit"
+namespace_id = "1001"
+simple = { limit = 20, period = 60 }
+
+[[unsafe.bindings]]
+name = "READ_LIMITER"
+type = "ratelimit"
+namespace_id = "1002"
+simple = { limit = 600, period = 60 }
+
+[[queues.producers]]
+binding = "VALIDATION"
+queue = "localmax-validation"
+
+[[queues.consumers]]
+queue = "localmax-validation"
+max_batch_size = 25
+max_batch_timeout = 10
+max_retries = 3
+dead_letter_queue = "localmax-validation-dlq"
+max_concurrency = 20
+
+# Hourly batch archive of newly accepted results into the GitHub repository.
+[triggers]
+crons = ["7 * * * *"]
+
+# Secrets, set with `wrangler secret put`:
+#   TURNSTILE_SECRET_KEY
+#   GITHUB_APP_ID
+#   GITHUB_APP_PRIVATE_KEY
+#   GITHUB_APP_INSTALLATION_ID
+
+[env.staging]
+name = "localmax-api-staging"
+workers_dev = true
+routes = []
+
+[env.staging.vars]
+ENVIRONMENT = "staging"
+SITE_ORIGIN = "https://staging.localmax.net"
+API_ORIGIN = "https://localmax-api-staging.workers.dev"
+MAX_ARTIFACT_BYTES = "67108864"
+MAX_SUBMISSION_BYTES = "134217728"
+TURNSTILE_SITE_KEY = "1x00000000000000000000AA"

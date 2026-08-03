@@ -1,0 +1,123 @@
+---
+import { axisFormat, extent, linearScale, TIER_COLOR } from "../lib/chart";
+import { num, short, TIER_LABEL } from "../lib/format";
+
+export interface Point {
+  x: number;
+  y: number;
+  label: string;
+  group: string;
+  href?: string;
+}
+
+interface Props {
+  points: Point[];
+  xLabel: string;
+  yLabel: string;
+  xUnit: string;
+  yUnit: string;
+  caption?: string;
+  /** Group key order controls colour assignment; never reordered by value. */
+  groups?: string[];
+}
+
+const {
+  points, xLabel, yLabel, xUnit, yUnit, caption,
+  groups = ["entry", "enthusiast", "frontier"],
+} = Astro.props;
+
+const W = 1000;
+const H = 460;
+const PAD = { top: 20, right: 26, bottom: 52, left: 66 };
+
+const valid = points.filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y));
+const [x0, x1] = extent(valid.map((p) => p.x));
+const [y0, y1] = extent(valid.map((p) => p.y));
+const xPad = (x1 - x0) * 0.08 || 1;
+const yPad = (y1 - y0) * 0.08 || 1;
+
+const x = linearScale([Math.max(0, x0 - xPad), x1 + xPad], [PAD.left, W - PAD.right]);
+const y = linearScale([Math.max(0, y0 - yPad), y1 + yPad], [H - PAD.bottom, PAD.top]);
+
+const present = groups.filter((g) => valid.some((p) => p.group === g));
+
+// Direct-label only the extremes, never every point.
+const labelled = new Set<Point>();
+for (const g of present) {
+  const inGroup = valid.filter((p) => p.group === g);
+  const best = inGroup.reduce((a, b) => (b.y > a.y ? b : a), inGroup[0]!);
+  if (best) labelled.add(best);
+}
+---
+
+{valid.length === 0 ? (
+  <div class="empty">Not enough results yet to plot.</div>
+) : (
+  <figure>
+    <svg
+      class="chart"
+      viewBox={`0 0 ${W} ${H}`}
+      role="img"
+      aria-label={`${yLabel} against ${xLabel}, ${valid.length} results grouped by tier`}
+    >
+      {y.ticks(5).map((t) => (
+        <g>
+          <line class="grid-line" x1={PAD.left} y1={y(t)} x2={W - PAD.right} y2={y(t)} />
+          <text class="axis-label" x={PAD.left - 10} y={y(t) + 4} text-anchor="end">{axisFormat(t)}</text>
+        </g>
+      ))}
+      {x.ticks(6).map((t) => (
+        <text class="axis-label" x={x(t)} y={H - PAD.bottom + 20} text-anchor="middle">{axisFormat(t)}</text>
+      ))}
+
+      <line class="baseline" x1={PAD.left} y1={H - PAD.bottom} x2={W - PAD.right} y2={H - PAD.bottom} />
+      <line class="baseline" x1={PAD.left} y1={PAD.top} x2={PAD.left} y2={H - PAD.bottom} />
+
+      <text class="axis-label" x={(PAD.left + W - PAD.right) / 2} y={H - 10} text-anchor="middle">
+        {xLabel} ({xUnit})
+      </text>
+      <text
+        class="axis-label"
+        transform={`rotate(-90 16 ${(PAD.top + H - PAD.bottom) / 2})`}
+        x={16}
+        y={(PAD.top + H - PAD.bottom) / 2}
+        text-anchor="middle"
+      >
+        {yLabel} ({yUnit})
+      </text>
+
+      {valid.map((p) => (
+        <circle
+          cx={x(p.x)} cy={y(p.y)} r="5.5"
+          fill={TIER_COLOR[p.group] ?? "var(--series-1)"}
+          class="mark-ring"
+          opacity="0.92"
+        >
+          <title>{p.label} — {num(p.y)} {yUnit}, {num(p.x)} {xUnit}</title>
+        </circle>
+      ))}
+
+      {[...labelled].map((p) => (
+        <text
+          x={x(p.x) + 11}
+          y={y(p.y) + 4}
+          fill="var(--text-secondary)"
+          font-size="11.5"
+        >
+          {short(p.label)}
+        </text>
+      ))}
+    </svg>
+
+    <ul class="legend">
+      {present.map((g) => (
+        <li>
+          <span class="swatch" style={`background:${TIER_COLOR[g]}`} aria-hidden="true"></span>
+          {TIER_LABEL[g] ?? g}
+        </li>
+      ))}
+    </ul>
+
+    {caption && <figcaption>{caption}</figcaption>}
+  </figure>
+)}

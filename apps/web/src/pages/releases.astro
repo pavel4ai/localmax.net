@@ -1,0 +1,117 @@
+---
+import Layout from "../components/Layout.astro";
+import { api, type ProfileSummary } from "../lib/api";
+import { LANE_LABEL, TIER_LABEL } from "../lib/format";
+
+const data = await api<{ profiles: ProfileSummary[] }>("/v1/profiles");
+const profiles = data?.profiles ?? [];
+---
+
+<Layout title="Releases" description="Benchmark profile versions, container digests and compatibility rules.">
+  <section class="wrap" style="padding:48px 0 0">
+    <div class="eyebrow">Releases</div>
+    <h1 style="margin:12px 0 16px;font-size:2.1rem">Versions and compatibility</h1>
+    <p class="lede">
+      A released profile is immutable. Changing the model, revision, precision, runtime,
+      flags, prompt set, token shape, assets, step count, seeds or metric definitions is a
+      major version bump that creates a separate leaderboard.
+    </p>
+  </section>
+
+  <section class="section wrap">
+    <h2>Current profile versions</h2>
+    <div class="table-scroll" style="margin-top:18px">
+      <table>
+        <thead>
+          <tr>
+            <th>Profile</th><th>Version</th><th>State</th><th>Model</th>
+            <th>Runtime</th><th>Profile hash</th>
+          </tr>
+        </thead>
+        <tbody>
+          {profiles.map((p) => (
+            <tr>
+              <td class="primary"><a href={`/benchmarks/${p.id}`}>{p.id}</a></td>
+              <td class="num dim">{p.version}</td>
+              <td>
+                <span class={`badge badge-${p.frozen ? "verified" : "community"}`}>
+                  <span class="dot" aria-hidden="true"></span>{p.frozen ? "Frozen" : "Release candidate"}
+                </span>
+              </td>
+              <td class="dim mono" style="font-size:11.5px">{p.model.repository}</td>
+              <td class="dim">{p.runtime.name} {p.runtime.version}</td>
+              <td class="dim mono" style="font-size:11.5px">{p.hash.slice(7, 21)}…</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="section wrap">
+    <h2>Version policy</h2>
+    <div class="grid grid-3" style="margin-top:18px">
+      <div class="tile">
+        <div class="tile-label">Major</div>
+        <div class="body">
+          Anything that changes a measured number: model, revision, precision, runtime,
+          runtime flags, workload shape, assets, seeds, metric definitions or ranking gates.
+          A new leaderboard; old results keep theirs.
+        </div>
+      </div>
+      <div class="tile">
+        <div class="tile-label">Minor</div>
+        <div class="body">
+          A new optional workload, or a new secondary metric that does not affect the rank.
+          Existing results stay comparable and simply lack the new column.
+        </div>
+      </div>
+      <div class="tile">
+        <div class="tile-label">Patch</div>
+        <div class="body">
+          Display names, summaries, comments and documentation. Nothing that could move a
+          value. Results are unaffected.
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:26px;max-width:var(--measure)">
+      <h3>Release candidates</h3>
+      <p style="margin-top:10px">
+        Profiles at version <code>0.x</code> are not frozen. Their model revision, runtime
+        version and harness commit are still being pinned against the tier's minimum-VRAM
+        reference system, and their leaderboards are provisional. Results collected against
+        a <code>0.x</code> profile are ranked only against that same version, and are not
+        migrated when it freezes.
+      </p>
+      <p style="margin-bottom:0">
+        Freezing a profile requires conformance data from at least two GPU classes including
+        the tier minimum, a repeatability coefficient of variation at or under 3%, and a
+        completed licence review of every model and asset it references.
+      </p>
+    </div>
+  </section>
+
+  <section class="section wrap">
+    <h2>Container images</h2>
+    <p style="margin-top:10px">
+      Every released image is multi-architecture (<code>linux/amd64</code> and
+      <code>linux/arm64</code>), signed with Cosign, and published with an SBOM and build
+      provenance. A result reaches Verified only if its recorded image digest matches a
+      released one.
+    </p>
+    <pre class="cmd">ghcr.io/pavel4ai/localmax-llm
+ghcr.io/pavel4ai/localmax-vision
+ghcr.io/pavel4ai/localmax-diffusion</pre>
+    <p style="margin-top:14px" class="muted">
+      Released digests are tracked in
+      <a href="https://github.com/pavel4ai/localmax.net/blob/main/containers/released-images.json" class="secondary">containers/released-images.json</a>
+      and compiled into the validator, so the accepted list is itself public and versioned.
+    </p>
+  </section>
+</Layout>
+
+<style>
+  .tile { padding: 20px; }
+  .body { font-size: 13px; color: var(--text-secondary); line-height: 1.55; margin-top: 8px; }
+</style>

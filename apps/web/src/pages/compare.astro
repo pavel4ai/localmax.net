@@ -1,0 +1,198 @@
+---
+import Badge from "../components/Badge.astro";
+import Layout from "../components/Layout.astro";
+import { api, type ResultRow } from "../lib/api";
+import {
+  LANE_LABEL, TIER_LABEL, bytes, headline, isoDate, metricLabel, ms, num,
+  pct, short, systemLabel, watts,
+} from "../lib/format";
+
+const ids = (Astro.url.searchParams.get("ids") ?? "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean)
+  .slice(0, 4);
+
+interface CompareResponse {
+  results: Array<ResultRow & { manifest: Record<string, any> }>;
+  comparable: boolean;
+  warning: string | null;
+}
+
+const data = ids.length >= 2
+  ? await api<CompareResponse>(`/v1/compare?ids=${ids.join(",")}`)
+  : null;
+
+const results = data?.results ?? [];
+
+interface Row {
+  label: string;
+  get: (r: ResultRow & { manifest: Record<string, any> }) => string;
+  /** Numeric extractor for best-value highlighting; undefined means no comparison. */
+  value?: (r: ResultRow) => number | null;
+  higher?: boolean;
+  group: string;
+}
+
+const ROWS: Row[] = [
+  { group: "Result", label: "Headline", get: (r) => `${headline(r.headline_value, r.headline_unit)} ${r.headline_unit}`, value: (r) => r.headline_value, higher: true },
+  { group: "Result", label: "Profile", get: (r) => `${TIER_LABEL[r.tier]} · ${LANE_LABEL[r.lane]} v${r.profile_version}` },
+  { group: "Result", label: "Ranked", get: (r) => (r.ranked ? "yes" : "no") },
+
+  { group: "Throughput", label: "Decode", get: (r) => (r.decode_tok_s === null ? "—" : `${num(r.decode_tok_s)} tok/s`), value: (r) => r.decode_tok_s, higher: true },
+  { group: "Throughput", label: "Prefill", get: (r) => (r.prefill_tok_s === null ? "—" : `${num(r.prefill_tok_s)} tok/s`), value: (r) => r.prefill_tok_s, higher: true },
+  { group: "Throughput", label: "Peak @ concurrency", get: (r) => (r.peak_tok_s === null ? "—" : `${num(r.peak_tok_s)} tok/s`), value: (r) => r.peak_tok_s, higher: true },
+  { group: "Throughput", label: "Images / min", get: (r) => (r.images_per_minute === null ? "—" : num(r.images_per_minute)), value: (r) => r.images_per_minute, higher: true },
+  { group: "Throughput", label: "Seconds / step", get: (r) => (r.seconds_per_step_s === null ? "—" : num(r.seconds_per_step_s, 3)), value: (r) => r.seconds_per_step_s, higher: false },
+
+  { group: "Latency", label: "TTFT p50", get: (r) => ms(r.ttft_p50_ms), value: (r) => r.ttft_p50_ms, higher: false },
+  { group: "Latency", label: "TTFT p95", get: (r) => ms(r.ttft_p95_ms), value: (r) => r.ttft_p95_ms, higher: false },
+  { group: "Latency", label: "Inter-token p95", get: (r) => ms(r.itl_p95_ms), value: (r) => r.itl_p95_ms, higher: false },
+  { group: "Latency", label: "End to end p50", get: (r) => ms(r.e2e_p50_ms), value: (r) => r.e2e_p50_ms, higher: false },
+  { group: "Latency", label: "Model load", get: (r) => (r.model_load_s === null ? "—" : `${num(r.model_load_s, 1)} s`), value: (r) => r.model_load_s, higher: false },
+
+  { group: "Resources", label: "Peak VRAM", get: (r) => bytes(r.vram_peak_bytes), value: (r) => r.vram_peak_bytes, higher: false },
+  { group: "Resources", label: "Average power", get: (r) => `${watts(r.power_avg_w)}${r.power_domain === "soc_module" ? " (SoC)" : ""}`, value: (r) => r.power_avg_w, higher: false },
+  { group: "Resources", label: "Peak power", get: (r) => watts(r.power_peak_w) },
+  { group: "Resources", label: "Peak temperature", get: (r) => (r.temperature_peak_c === null ? "—" : `${Math.round(r.temperature_peak_c)}°C`) },
+  { group: "Resources", label: "Throttle events", get: (r) => `${r.throttle_thermal ?? 0} thermal / ${r.throttle_power ?? 0} power` },
+
+  { group: "System", label: "GPU", get: (r) => `${r.gpu_count > 1 ? `${r.gpu_count}× ` : ""}${short(r.gpu_name)}` },
+  { group: "System", label: "Architecture", get: (r) => r.gpu_architecture ?? "—" },
+  { group: "System", label: "CPU", get: (r) => r.cpu_model ?? "—" },
+  { group: "System", label: "System RAM", get: (r) => bytes(r.system_ram_bytes) },
+  { group: "System", label: "OS", get: (r) => r.os ?? "—" },
+  { group: "System", label: "Driver / CUDA", get: (r) => `${r.driver ?? "—"} / ${r.cuda ?? "—"}` },
+  { group: "System", label: "Runtime", get: (r) => `${r.runtime ?? "—"} ${r.runtime_version ?? ""}` },
+  { group: "System", label: "Cooling / tuning", get: (r) => `${r.cooling ?? "—"} / ${r.tuning ?? "—"}` },
+  { group: "System", label: "Benchmarked", get: (r) => isoDate(r.created_at) },
+];
+
+const groups = [...new Set(ROWS.map((r) => r.group))];
+
+/** Index of the best value in a row, or null when there is nothing to compare. */
+function bestIndex(row: Row): number | null {
+  if (!row.value || results.length < 2) return null;
+  const values = results.map((r) => row.value!(r));
+  if (values.some((v) => v === null)) return null;
+  let best = 0;
+  for (let i = 1; i < values.length; i++) {
+    if (row.higher ? values[i]! > values[best]! : values[i]! < values[best]!) best = i;
+  }
+  return best;
+}
+
+const visible = ROWS.filter(
+  (row) => results.length === 0 || results.some((r) => row.get(r) !== "—"),
+);
+---
+
+<Layout title="Compare" description="Compare two to four LocalMax results side by side.">
+  <section class="wrap" style="padding:48px 0 0">
+    <div class="eyebrow">Compare</div>
+    <h1 style="margin:12px 0 14px;font-size:2.1rem">Side by side</h1>
+    <p class="lede">
+      Paste between two and four run IDs, or reach this page from any result. The comparison
+      is honest about what is comparable: results from different profiles are shown, but
+      flagged rather than quietly lined up.
+    </p>
+
+    <form method="get" class="picker">
+      <label class="visually-hidden" for="ids">Run IDs, comma separated</label>
+      <input
+        id="ids"
+        type="text"
+        name="ids"
+        value={ids.join(",")}
+        placeholder="01JQ8Z…, 01JQ90…"
+        style="flex:1;min-width:260px"
+      />
+      <button type="submit" class="btn">Compare</button>
+    </form>
+  </section>
+
+  {ids.length < 2 && (
+    <section class="wrap" style="padding-top:26px">
+      <div class="empty">
+        Add at least two run IDs. Every result page has a Compare button that starts one for you.
+      </div>
+    </section>
+  )}
+
+  {data?.warning && (
+    <section class="wrap" style="padding-top:24px">
+      <div class="warning-panel">
+        <strong>Different profiles.</strong> {data.warning}
+      </div>
+    </section>
+  )}
+
+  {results.length >= 2 && (
+    <section class="wrap" style="padding-top:26px">
+      <div class="table-scroll">
+        <table class="compare">
+          <thead>
+            <tr>
+              <th style="min-width:150px"></th>
+              {results.map((r) => (
+                <th class="num">
+                  <a href={`/results/${r.run_id}`}>{systemLabel(r)}</a>
+                  <div style="margin-top:5px"><Badge verification={r.verification} ranked={r.ranked} compact /></div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {groups.map((group) => (
+              <>
+                <tr class="group-row">
+                  <td colspan={results.length + 1}>{group}</td>
+                </tr>
+                {visible.filter((row) => row.group === group).map((row) => {
+                  const best = bestIndex(row);
+                  return (
+                    <tr>
+                      <td class="dim">{row.label}</td>
+                      {results.map((r, i) => (
+                        <td class={`num${i === best ? " best" : ""}`}>{row.get(r)}</td>
+                      ))}
+                    </tr>
+                  );
+                })}
+              </>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p class="muted" style="font-size:12.5px;margin-top:14px;max-width:var(--measure)">
+        A highlighted cell is the best value in that row among these results only. It is not a
+        rank, and a row is never highlighted when any of the systems did not report it.
+      </p>
+    </section>
+  )}
+</Layout>
+
+<style>
+  .picker { display: flex; gap: 10px; margin-top: 22px; flex-wrap: wrap; }
+  .warning-panel {
+    border: 1px solid color-mix(in srgb, var(--warning) 45%, transparent);
+    background: color-mix(in srgb, var(--warning) 8%, transparent);
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    font-size: 13.5px;
+    color: var(--text-secondary);
+    max-width: var(--measure);
+  }
+  table.compare thead th { text-align: right; vertical-align: bottom; }
+  table.compare thead th:first-child { text-align: left; }
+  .group-row td {
+    background: var(--surface-2);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding: 8px 12px;
+  }
+  td.best { color: var(--text-primary); font-weight: 600; background: var(--accent-dim); }
+</style>

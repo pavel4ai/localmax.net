@@ -1,0 +1,146 @@
+---
+import Layout from "../../components/Layout.astro";
+import { api, type ProfileSummary } from "../../lib/api";
+import { CATEGORY_LABEL, LANE_LABEL, TIER_LABEL, TIER_VRAM, bytes, compact, num } from "../../lib/format";
+
+const data = await api<{ profiles: ProfileSummary[] }>("/v1/profiles");
+const profiles = data?.profiles ?? [];
+
+const categories = ["llm", "vision", "diffusion"] as const;
+const tiers = ["entry", "enthusiast", "frontier"] as const;
+const lanes = ["base", "int4", "nvfp4"] as const;
+
+const find = (c: string, t: string, l: string) =>
+  profiles.find((p) => p.category === c && p.tier === t && p.lane === l);
+
+const LANE_NOTE: Record<string, string> = {
+  base: "BF16. Runs on every supported GPU — the fair cross-generation baseline.",
+  int4: "AWQ INT4. Ampere and up. A larger model in the same VRAM.",
+  nvfp4: "NVFP4. Blackwell only: RTX 5090, RTX PRO 6000, DGX Spark.",
+};
+---
+
+<Layout title="Benchmarks" description="Every LocalMax benchmark profile: three categories, three VRAM tiers, three quantization lanes.">
+  <section class="wrap" style="padding:56px 0 0">
+    <div class="eyebrow">Benchmarks</div>
+    <h1 style="margin:12px 0 18px;font-size:2.2rem">The profile matrix</h1>
+    <p class="lede">
+      A profile is the unit of comparability. Two results share a rank only when the
+      category, tier, lane, profile version, runtime, GPU count and parallelism all match.
+      Everything else is shown side by side but never ranked together.
+    </p>
+  </section>
+
+  {categories.map((category) => (
+    <section class="section wrap">
+      <div class="section-head">
+        <h2>{CATEGORY_LABEL[category]}</h2>
+        <span class="muted" style="font-size:13px">
+          {category === "llm" && "Ranked on decode throughput under TTFT and inter-token latency gates."}
+          {category === "vision" && "Ranked on images per minute, behind a deterministic answer-accuracy gate."}
+          {category === "diffusion" && "Ranked on seconds per denoising step. Images per minute is derived from it."}
+        </span>
+      </div>
+
+      <div class="matrix">
+        <div class="matrix-head"></div>
+        {lanes.map((lane) => (
+          <div class="matrix-head">
+            <strong>{LANE_LABEL[lane]}</strong>
+            <span>{LANE_NOTE[lane]}</span>
+          </div>
+        ))}
+
+        {tiers.map((tier) => (
+          <>
+            <div class="matrix-row-head">
+              <strong>{TIER_LABEL[tier]}</strong>
+              <span>{TIER_VRAM[tier]}</span>
+            </div>
+            {lanes.map((lane) => {
+              const p = find(category, tier, lane);
+              if (!p) {
+                return <div class="cell cell-empty"><span class="muted">Not defined</span></div>;
+              }
+              return (
+                <a href={`/benchmarks/${p.id}`} class="cell">
+                  <div class="cell-model">{num(p.model.parameters_b, 0)}B · {p.model.repository.split("/").pop()}</div>
+                  <div class="cell-meta">
+                    {bytes(p.requirements.min_vram_bytes)} minimum
+                    {p.requirements.expected_runtime_minutes ? ` · ~${p.requirements.expected_runtime_minutes} min` : ""}
+                  </div>
+                  <div class="cell-foot">
+                    <span class="tnum">{compact(p.result_count)} result{p.result_count === 1 ? "" : "s"}</span>
+                    {p.published
+                      ? <span class="live">Live</span>
+                      : <span class="muted">{p.system_count > 0 ? `${p.system_count}/2 systems` : "Awaiting results"}</span>}
+                  </div>
+                </a>
+              );
+            })}
+          </>
+        ))}
+      </div>
+    </section>
+  ))}
+
+  <section class="section wrap">
+    <div class="panel" style="max-width:var(--measure)">
+      <h3>Why a leaderboard can stay hidden</h3>
+      <p style="margin-top:10px">
+        A profile is runnable as soon as it exists, but its leaderboard only appears once two
+        independent systems have verified results on it. A table with one row is not a
+        comparison, and publishing it would imply a ranking that the data cannot support.
+      </p>
+      <p style="margin-bottom:0">
+        Profiles at version <code>0.x</code> are release candidates: the model revision,
+        runtime version and harness commit are still being pinned against the tier's
+        minimum-VRAM reference system. Results collected against a <code>0.x</code> profile
+        are ranked only against that same version.
+      </p>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .matrix {
+    display: grid;
+    grid-template-columns: 150px repeat(3, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .matrix-head, .matrix-row-head, .cell { background: var(--surface-1); padding: 14px 16px; }
+  .matrix-head { display: flex; flex-direction: column; gap: 4px; background: var(--surface-2); }
+  .matrix-head strong { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .matrix-head span { font-size: 11.5px; color: var(--text-muted); line-height: 1.45; }
+  .matrix-row-head {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    background: var(--surface-2);
+  }
+  .matrix-row-head strong { font-size: 13px; }
+  .matrix-row-head span { font-size: 11.5px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  .cell { display: flex; flex-direction: column; gap: 6px; min-height: 92px; }
+  a.cell:hover { background: var(--surface-2); color: inherit; }
+  .cell-model { font-size: 13.5px; font-weight: 550; color: var(--text-primary); }
+  .cell-meta { font-size: 11.5px; color: var(--text-muted); }
+  .cell-foot {
+    margin-top: auto;
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 11.5px;
+    color: var(--text-muted);
+  }
+  .live { color: var(--good); font-weight: 550; }
+  .cell-empty { align-items: flex-start; justify-content: center; font-size: 12px; }
+  @media (max-width: 780px) {
+    .matrix { grid-template-columns: 1fr; }
+    .matrix-head:first-child { display: none; }
+  }
+</style>

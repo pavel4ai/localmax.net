@@ -1,0 +1,41 @@
+{
+  "name": "localmax",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Open benchmarks for local generative AI",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pavel4ai/localmax.net.git"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "workspaces": [
+    "apps/api",
+    "apps/web"
+  ],
+  "scripts": {
+    "dev:api": "npm run dev --workspace apps/api",
+    "dev:web": "npm run dev --workspace apps/web",
+    "build": "npm run build --workspace apps/api && npm run build --workspace apps/web",
+    "check": "npm run check --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "deploy:api": "npm run deploy --workspace apps/api",
+    "deploy:web": "npm run deploy --workspace apps/web",
+    "deploy": "npm run deploy:api && npm run deploy:web",
+    "validate:results": "node scripts/validate-results.mjs",
+    "validate:profiles": "node scripts/validate-profiles.mjs",
+    "seed:local": "node scripts/seed-local.mjs > /tmp/localmax-seed.sql && npm run --workspace apps/api migrate:local && wrangler d1 execute localmax --local --file /tmp/localmax-seed.sql --config apps/api/wrangler.toml",
+    "dev": "npm run dev:api & npm run dev:web"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260730.1",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "typescript": "^5.7.3",
+    "vitest": "^4.1.0",
+    "wrangler": "^4.118.0"
+  }
+}
