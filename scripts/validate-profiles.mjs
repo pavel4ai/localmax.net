@@ -16,7 +16,7 @@ for (const f of readdirSync(join(ROOT, "schemas")).filter((f) => f.endsWith(".sc
 }
 const validate = ajv.getSchema(BASE + "profile.schema.json");
 
-const TIER_VRAM = { entry: 12, enthusiast: 24, frontier: 64 };
+const TIER_VRAM = { entry: 12, enthusiast: 24, prospector: 64 };
 let failures = 0;
 
 for (const file of readdirSync(join(ROOT, "benchmarks", "profiles")).sort()) {

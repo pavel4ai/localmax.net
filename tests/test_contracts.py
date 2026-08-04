@@ -166,7 +166,7 @@ def test_every_profile_declares_a_ranking_source_that_exists():
 
 
 def test_tier_minimums_are_consistent_across_profiles():
-    expected = {"entry": 12, "enthusiast": 24, "frontier": 64}
+    expected = {"entry": 12, "enthusiast": 24, "prospector": 64}
     for profile in load_all():
         gb = profile.requirements["min_vram_bytes"] / 1024 ** 3
         assert gb == expected[profile["tier"]], profile.id

@@ -1,14 +1,14 @@
 {
   "$schema": "../../schemas/profile.schema.json",
   "schema_version": "1.0.0",
-  "id": "vision-frontier-fp8",
+  "id": "vision-prospector-fp8",
   "version": "0.1.0",
   "frozen": false,
   "published": false,
-  "display_name": "Vision \u00b7 Frontier \u00b7 FP8",
+  "display_name": "Vision \u00b7 Prospector \u00b7 FP8",
   "summary": "A 32B vision model at FP8, sized to fill 64 GB.",
   "category": "vision",
-  "tier": "frontier",
+  "tier": "prospector",
   "lane": "fp8",
   "requirements": {
     "min_vram_bytes": 68719476736,
@@ -27,7 +27,9 @@
     ],
     "gpu_count": [
       1,
-      2
+      2,
+      4,
+      8
     ],
     "expected_runtime_minutes": 14,
     "expected_download_bytes": 38976828211
@@ -272,6 +274,7 @@
     "This profile is a release candidate. The runtime is pinned. The model revision is not final. This leaderboard is provisional.",
     "The headline is images for each minute at concurrency 2.",
     "Quality is a gate, not a score. The OCR, chart and document tasks have fixed expected answers. LocalMax records the description and reasoning tasks but does not score them.",
-    "LocalMax reports image encode time separately from prompt prefill."
+    "LocalMax reports image encode time separately from prompt prefill.",
+    "This tier accepts a cluster. LocalMax computes the tier from the total VRAM across all nodes, so eight DGX Sparks are one Prospector system. It ranks each GPU count and each parallelism mode separately, because the network fabric changes the result."
   ]
 }

@@ -26,7 +26,7 @@ GB = 1024**3
 TIERS = {
     "entry": (12 * GB, 16 * GB, [1], ["ampere", "ada", "blackwell", "blackwell-gb10", "hopper"]),
     "enthusiast": (24 * GB, 32 * GB, [1], ["ampere", "ada", "blackwell", "blackwell-gb10", "hopper"]),
-    "frontier": (64 * GB, 64 * GB, [1, 2], ["blackwell", "blackwell-gb10", "hopper"]),
+    "prospector": (64 * GB, 64 * GB, [1, 2], ["blackwell", "blackwell-gb10", "hopper"]),
 }
 
 LANES = {
@@ -57,15 +57,15 @@ MODELS: dict[tuple[str, str, str], dict] = {
         "repository": "nvidia/Qwen3-32B-NVFP4", "parameters_b": 32.0,
         "weights_bytes": 18 * GB, "license": "Apache-2.0",
     },
-    ("llm", "frontier", "base"): {
+    ("llm", "prospector", "base"): {
         "repository": "Qwen/Qwen3-32B", "parameters_b": 32.0,
         "weights_bytes": 64 * GB, "license": "Apache-2.0",
     },
-    ("llm", "frontier", "int4"): {
+    ("llm", "prospector", "int4"): {
         "repository": "Qwen/Qwen2.5-72B-Instruct-AWQ", "parameters_b": 72.0,
         "weights_bytes": 40 * GB, "license": "Qwen",
     },
-    ("llm", "frontier", "nvfp4"): {
+    ("llm", "prospector", "nvfp4"): {
         "repository": "nvidia/Qwen2.5-72B-Instruct-NVFP4", "parameters_b": 72.0,
         "weights_bytes": 40 * GB, "license": "Qwen",
     },
@@ -77,7 +77,7 @@ MODELS: dict[tuple[str, str, str], dict] = {
         "repository": "Qwen/Qwen3-VL-8B-Instruct", "parameters_b": 8.0,
         "weights_bytes": 17 * GB, "license": "Apache-2.0",
     },
-    ("vision", "frontier", "base"): {
+    ("vision", "prospector", "base"): {
         "repository": "Qwen/Qwen3-VL-32B-Instruct", "parameters_b": 32.0,
         "weights_bytes": 66 * GB, "license": "Apache-2.0",
     },
@@ -89,7 +89,7 @@ MODELS: dict[tuple[str, str, str], dict] = {
         "repository": "stabilityai/stable-diffusion-3.5-large", "parameters_b": 8.1,
         "weights_bytes": 17 * GB, "license": "Stability-Community",
     },
-    ("diffusion", "frontier", "base"): {
+    ("diffusion", "prospector", "base"): {
         "repository": "black-forest-labs/FLUX.1-schnell", "parameters_b": 12.0,
         "weights_bytes": 24 * GB, "license": "Apache-2.0",
     },
@@ -99,13 +99,13 @@ MODELS: dict[tuple[str, str, str], dict] = {
 LAUNCH_SET = {
     ("llm", "entry", "base"), ("llm", "entry", "int4"),
     ("llm", "enthusiast", "base"), ("llm", "enthusiast", "int4"),
-    ("llm", "frontier", "base"),
+    ("llm", "prospector", "base"),
     ("vision", "entry", "base"), ("vision", "enthusiast", "base"),
     ("diffusion", "entry", "base"), ("diffusion", "enthusiast", "base"),
 }
 
 CATEGORY_LABEL = {"llm": "LLM", "vision": "Vision", "diffusion": "Diffusion"}
-TIER_LABEL = {"entry": "Entry", "enthusiast": "Enthusiast", "frontier": "Frontier"}
+TIER_LABEL = {"entry": "Entry", "enthusiast": "Enthusiast", "prospector": "Prospector"}
 
 VISION_TASKS = ["ocr", "chart", "document", "description", "reasoning"]
 
@@ -326,7 +326,7 @@ def build(category: str, tier: str, lane: str, template: dict) -> dict:
 
     else:  # llm
         p["runtime"]["flags"]["tensor-parallel-size"] = 1
-        if tier == "frontier":
+        if tier == "prospector":
             p["runtime"]["flags"]["max-model-len"] = 32768
             p["notes"] = [
                 "Release candidate. Model revision, vLLM version and AIPerf commit are PENDING until the bake-off.",

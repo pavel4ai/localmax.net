@@ -85,7 +85,7 @@ export interface ResultRow {
   profile_id: string;
   profile_version: string;
   category: "llm" | "vision" | "diffusion";
-  tier: "entry" | "enthusiast" | "frontier";
+  tier: "entry" | "enthusiast" | "prospector";
   lane: "fp8" | "int4" | "nvfp4" | "bf16";
   gpu_key: string;
   gpu_name: string;
@@ -152,7 +152,7 @@ export interface ProfileSummary {
   display_name: string;
   summary: string | null;
   category: "llm" | "vision" | "diffusion";
-  tier: "entry" | "enthusiast" | "frontier";
+  tier: "entry" | "enthusiast" | "prospector";
   lane: "fp8" | "int4" | "nvfp4" | "bf16";
   version: string;
   frozen: boolean;

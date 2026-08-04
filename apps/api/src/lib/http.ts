@@ -1,5 +1,6 @@
 import type { Context } from "hono";
 import type { Env } from "../env";
+import { REGISTRY_VERSION } from "../generated/registry";
 
 export type ApiErrorCode =
   | "bad_request"
@@ -64,7 +65,13 @@ export async function cached(
   staleSeconds = ttlSeconds * 10,
 ): Promise<Response> {
   const cache = caches.default;
-  const key = new Request(new URL(c.req.url).toString(), { method: "GET" });
+
+  // The cache key carries a registry version. Without it a deploy that renames a tier or a
+  // lane keeps serving the old response shape until the TTL expires — a cached body with a
+  // retired enum value, which reads as missing data rather than as stale data.
+  const url = new URL(c.req.url);
+  url.searchParams.set("__v", REGISTRY_VERSION);
+  const key = new Request(url.toString(), { method: "GET" });
 
   const hit = await cache.match(key);
   if (hit) {

@@ -18,7 +18,7 @@ const totals = stats?.totals ?? { results: 0, ranked: 0, gpus: 0, systems: 0, pr
 const recent = stats?.recent ?? [];
 const profiles = profileData?.profiles ?? [];
 
-const tiers = ["entry", "enthusiast", "frontier"] as const;
+const tiers = ["entry", "enthusiast", "prospector"] as const;
 const ORDER = ["llm", "vision", "diffusion"];
 const byTier = (t: string) =>
   profiles
@@ -28,7 +28,14 @@ const byTier = (t: string) =>
 const TIER_NOTE: Record<string, string> = {
   entry: "The smallest supported card runs this.",
   enthusiast: "Sized to fill 24 GB.",
-  frontier: "Sized to fill 64 GB and more.",
+  prospector: "Sized to fill 64 GB and more. A cluster counts as one system.",
+};
+
+/** Largest model each tier runs, in billions of parameters. */
+const TIER_MODEL: Record<string, string> = {
+  entry: "up to 4B parameters",
+  enthusiast: "up to 8B parameters",
+  prospector: "up to 32B parameters",
 };
 ---
 
@@ -40,6 +47,12 @@ const TIER_NOTE: Record<string, string> = {
       <p class="lede">
         The model, the precision, the workload and the container are fixed. Only your
         hardware changes. The numbers compare.
+      </p>
+
+      <p class="scope">
+        For hardware that you can run at home. LocalMax may accept a result from a
+        data-centre GPU or system, but it reserves the right not to show it and not to rank
+        it.
       </p>
 
       <div class="hero-actions">
@@ -80,12 +93,13 @@ const TIER_NOTE: Record<string, string> = {
         return (
           <div class="tile tier-card">
             <div class="tile-label">{TIER_LABEL[tier]} · {TIER_VRAM[tier]}</div>
+            <div class="tier-model">{TIER_MODEL[tier]} at FP8</div>
             <div class="tier-note">{TIER_NOTE[tier]}</div>
             <ul class="tier-list">
               {list.map((p) => (
                 <li>
                   <a href={`/benchmarks/${p.id}`}>{CATEGORY_LABEL[p.category]}</a>
-                  <span class="muted tnum">{num(p.model.parameters_b, 0)}B · {LANE_LABEL[p.lane]}</span>
+                  <span class="muted tnum">{num(p.model.parameters_b, 0)}B params</span>
                 </li>
               ))}
               {list.length === 0 && <li class="muted">No profile yet</li>}
@@ -97,8 +111,10 @@ const TIER_NOTE: Record<string, string> = {
     </div>
 
     <p class="muted" style="margin-top:18px;font-size:13px">
-      Each tier also has an INT4 lane and an NVFP4 lane. LocalMax ranks each lane on its own.
-      Different precisions are different work. <a href="/methodology" class="secondary">Methodology →</a>
+      A tier gives the largest model it runs, in billions of parameters, at FP8. LocalMax also
+      accepts and ranks INT4 and NVFP4 submissions. Each lane has its own leaderboard, because
+      different precisions are different work.
+      <a href="/methodology" class="secondary">Methodology →</a>
     </p>
   </section>
 
@@ -144,9 +160,22 @@ const TIER_NOTE: Record<string, string> = {
   .hero { padding: 88px 0 40px; }
   .hero h1 { margin: 14px 0 18px; }
   .hero .lede { font-size: 1.1rem; }
+  .scope {
+    margin: 18px 0 0;
+    padding-left: 14px;
+    border-left: 2px solid var(--border-strong);
+    font-size: 13.5px;
+    color: var(--text-muted);
+    max-width: 60ch;
+  }
   .hero-actions { display: flex; gap: 12px; margin-top: 26px; flex-wrap: wrap; }
 
   .tier-card { gap: 10px; padding: 22px; }
+  .tier-model {
+    font-size: 13px;
+    color: var(--text-primary);
+    font-weight: 560;
+  }
   .tier-note { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
   .tier-list { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 6px; }
   .tier-list li {

@@ -7,7 +7,7 @@ const data = await api<{ profiles: ProfileSummary[] }>("/v1/profiles");
 const profiles = data?.profiles ?? [];
 
 const categories = ["llm", "vision", "diffusion"] as const;
-const tiers = ["entry", "enthusiast", "frontier"] as const;
+const tiers = ["entry", "enthusiast", "prospector"] as const;
 const lanes = ["fp8", "int4", "nvfp4"] as const;
 
 const find = (c: string, t: string, l: string) =>
@@ -26,8 +26,12 @@ const LANE_NOTE: Record<string, string> = {
     <h1 style="margin:12px 0 18px;font-size:2.2rem">The profile matrix</h1>
     <p class="lede">
       A profile is the unit of comparison. Two results share a rank only if the category,
-      tier, lane, profile version, runtime, GPU count and parallelism all agree. LocalMax
-      shows other results together, but it does not rank them together.
+      tier, lane, profile version, runtime, GPU count and parallelism all agree.
+    </p>
+    <p class="lede" style="margin-top:12px">
+      Each cell gives the model size in billions of parameters. A tier is the total VRAM its
+      run must fill. For a cluster, LocalMax adds the VRAM of every node, so eight DGX Sparks
+      are one Prospector system.
     </p>
   </section>
 
@@ -64,7 +68,8 @@ const LANE_NOTE: Record<string, string> = {
               }
               return (
                 <a href={`/benchmarks/${p.id}`} class="cell">
-                  <div class="cell-model">{num(p.model.parameters_b, 0)}B · {p.model.repository.split("/").pop()}</div>
+                  <div class="cell-model">{num(p.model.parameters_b, 0)}B parameters</div>
+                  <div class="cell-repo">{p.model.repository.split("/").pop()}</div>
                   <div class="cell-meta">
                     {bytes(p.requirements.min_vram_bytes)} minimum
                     {p.requirements.expected_runtime_minutes ? ` · ~${p.requirements.expected_runtime_minutes} min` : ""}
@@ -125,6 +130,7 @@ const LANE_NOTE: Record<string, string> = {
   .cell { display: flex; flex-direction: column; gap: 6px; min-height: 92px; }
   a.cell:hover { background: var(--surface-2); color: inherit; }
   .cell-model { font-size: 13.5px; font-weight: 550; color: var(--text-primary); }
+  .cell-repo { font-size: 11.5px; color: var(--text-muted); font-family: var(--font-mono); overflow-wrap: anywhere; }
   .cell-meta { font-size: 11.5px; color: var(--text-muted); }
   .cell-foot {
     margin-top: auto;

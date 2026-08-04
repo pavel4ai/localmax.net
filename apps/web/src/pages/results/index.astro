@@ -69,7 +69,7 @@ const anyFilter = PASSTHROUGH.some((k) => q.get(k));
       </div>
       <div class="filter-row">
         <span class="filter-label">Tier</span>
-        {(["entry", "enthusiast", "frontier"] as const).map((t) => (
+        {(["entry", "enthusiast", "prospector"] as const).map((t) => (
           <a href={withFilter("tier", t)} class="chip" aria-current={active("tier", t) ? "true" : undefined}>
             {TIER_LABEL[t]}
           </a>

@@ -119,7 +119,7 @@ export const CATEGORY_LABEL: Record<string, string> = {
 export const TIER_LABEL: Record<string, string> = {
   entry: "Entry",
   enthusiast: "Enthusiast",
-  frontier: "Frontier",
+  prospector: "Prospector",
 };
 
 export const LANE_LABEL: Record<string, string> = {
@@ -140,7 +140,7 @@ export const LANE_HARDWARE: Record<string, string> = {
 export const TIER_VRAM: Record<string, string> = {
   entry: "12 GB+",
   enthusiast: "24 GB+",
-  frontier: "64 GB+",
+  prospector: "64 GB+",
 };
 
 /**

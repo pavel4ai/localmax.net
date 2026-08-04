@@ -151,7 +151,7 @@ export interface Profile {
   display_name: string;
   summary?: string;
   category: "llm" | "vision" | "diffusion";
-  tier: "entry" | "enthusiast" | "frontier";
+  tier: "entry" | "enthusiast" | "prospector";
   lane: "fp8" | "int4" | "nvfp4" | "bf16";
   hash: string;
   requirements: {
@@ -213,6 +213,14 @@ export interface GpuSpec {
 export const PROFILES: Record<string, Profile> = ${JSON.stringify(profiles, null, 2)} as const;
 
 export const PROFILE_IDS = Object.keys(PROFILES);
+
+/**
+ * Changes whenever any profile changes. Used in read-cache keys so a deploy cannot keep
+ * serving a response built against the previous profile set.
+ */
+export const REGISTRY_VERSION = ${JSON.stringify(
+  sha256(Object.values(profiles).map((p) => p.hash).join("|")).slice(7, 19),
+)};
 
 export const TIERS: Record<string, { min_vram_bytes: number; label: string; description: string }> =
   ${JSON.stringify(hardware.tiers, null, 2)};

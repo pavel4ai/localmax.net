@@ -19,52 +19,109 @@
     },
     "category": {
       "type": "string",
-      "enum": ["llm", "vision", "diffusion"]
+      "enum": [
+        "llm",
+        "vision",
+        "diffusion"
+      ]
     },
     "tier": {
       "type": "string",
-      "enum": ["entry", "enthusiast", "frontier"],
-      "description": "Defined by the VRAM the ranked run is meant to fill: 12 / 24 / 64 GB."
+      "enum": [
+        "entry",
+        "enthusiast",
+        "prospector"
+      ],
+      "description": "Defined by the total VRAM the ranked run must fill: 12, 24 or 64 GB. Total means every GPU in the system, across all nodes."
     },
     "lane": {
       "type": "string",
-      "enum": ["fp8", "int4", "nvfp4", "bf16"],
+      "enum": [
+        "fp8",
+        "int4",
+        "nvfp4",
+        "bf16"
+      ],
       "description": "Quantization lane. Each is ranked separately. 'fp8' is the default and needs Ada or newer. 'int4' has the widest hardware support and includes Ampere. 'nvfp4' needs Blackwell. 'bf16' is reserved."
     },
     "precision": {
       "type": "string",
-      "enum": ["bf16", "fp16", "fp8_e4m3", "nvfp4", "int4_awq", "int4_gptq", "int8"]
+      "enum": [
+        "bf16",
+        "fp16",
+        "fp8_e4m3",
+        "nvfp4",
+        "int4_awq",
+        "int4_gptq",
+        "int8"
+      ]
     },
     "parallelism": {
       "type": "string",
-      "enum": ["none", "tp2", "tp4", "tp8", "pp2"],
-      "description": "Ranked separately. 'none' means a single GPU."
+      "enum": [
+        "none",
+        "tp2",
+        "tp4",
+        "tp8",
+        "tp16",
+        "pp2",
+        "pp4",
+        "tp_pp"
+      ],
+      "description": "Ranked separately. 'none' is a single GPU. A value with pp is pipeline parallelism, which a cluster normally uses across nodes."
     },
     "architecture": {
       "type": "string",
-      "enum": ["ampere", "ada", "hopper", "blackwell", "blackwell-gb10"]
+      "enum": [
+        "ampere",
+        "ada",
+        "hopper",
+        "blackwell",
+        "blackwell-gb10"
+      ]
     },
     "cpuArch": {
       "type": "string",
-      "enum": ["x86_64", "aarch64"]
+      "enum": [
+        "x86_64",
+        "aarch64"
+      ]
     },
     "memoryType": {
       "type": "string",
-      "enum": ["discrete", "unified"],
+      "enum": [
+        "discrete",
+        "unified"
+      ],
       "description": "'unified' covers GB10-class systems where GPU and CPU share LPDDR."
     },
     "powerDomain": {
       "type": "string",
-      "enum": ["gpu_board", "soc_module", "unavailable"],
+      "enum": [
+        "gpu_board",
+        "soc_module",
+        "unavailable"
+      ],
       "description": "What the reported wattage physically measures. gpu_board and soc_module are NOT comparable and are never ranked against one another."
     },
     "verification": {
       "type": "string",
-      "enum": ["community", "verified", "rejected", "flagged"]
+      "enum": [
+        "community",
+        "verified",
+        "rejected",
+        "flagged"
+      ]
     },
     "workloadStatus": {
       "type": "string",
-      "enum": ["passed", "failed", "skipped", "oom", "timeout"]
+      "enum": [
+        "passed",
+        "failed",
+        "skipped",
+        "oom",
+        "timeout"
+      ]
     },
     "metricMap": {
       "type": "object",
@@ -73,22 +130,45 @@
         "pattern": "^[a-z][a-z0-9_]*_(ms|s|tok_s|req_s|img_s|img_min|frame_s|gb_s|bytes|w|j|c|pct|count|ratio)$"
       },
       "additionalProperties": {
-        "type": ["number", "null"]
+        "type": [
+          "number",
+          "null"
+        ]
       }
     },
     "percentiles": {
       "type": "object",
       "properties": {
-        "p50": { "type": "number" },
-        "p90": { "type": "number" },
-        "p95": { "type": "number" },
-        "p99": { "type": "number" },
-        "min": { "type": "number" },
-        "max": { "type": "number" },
-        "mean": { "type": "number" },
-        "stddev": { "type": "number" }
+        "p50": {
+          "type": "number"
+        },
+        "p90": {
+          "type": "number"
+        },
+        "p95": {
+          "type": "number"
+        },
+        "p99": {
+          "type": "number"
+        },
+        "min": {
+          "type": "number"
+        },
+        "max": {
+          "type": "number"
+        },
+        "mean": {
+          "type": "number"
+        },
+        "stddev": {
+          "type": "number"
+        }
       },
-      "required": ["p50", "p95", "mean"],
+      "required": [
+        "p50",
+        "p95",
+        "mean"
+      ],
       "additionalProperties": false
     },
     "artifact": {
@@ -111,8 +191,14 @@
             "quality_report"
           ]
         },
-        "hash": { "$ref": "#/$defs/sha256" },
-        "size_bytes": { "type": "integer", "minimum": 1, "maximum": 67108864 },
+        "hash": {
+          "$ref": "#/$defs/sha256"
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 67108864
+        },
         "media_type": {
           "type": "string",
           "enum": [
@@ -124,9 +210,18 @@
             "image/png"
           ]
         },
-        "required": { "type": "boolean", "default": true }
+        "required": {
+          "type": "boolean",
+          "default": true
+        }
       },
-      "required": ["name", "kind", "hash", "size_bytes", "media_type"],
+      "required": [
+        "name",
+        "kind",
+        "hash",
+        "size_bytes",
+        "media_type"
+      ],
       "additionalProperties": false
     }
   }

@@ -11,11 +11,11 @@ const data = await api<{
 const gpus = data?.gpus ?? [];
 const unregistered = data?.unregistered ?? [];
 
-const classes = ["entry", "enthusiast", "frontier"] as const;
+const classes = ["entry", "enthusiast", "prospector"] as const;
 const CLASS_NOTE: Record<string, string> = {
   entry: "12 GB to 17 GB. Runs the Entry tier.",
   enthusiast: "24 GB to 48 GB. Runs Entry and Enthusiast.",
-  frontier: "64 GB and more, including unified memory. Runs all three tiers.",
+  prospector: "64 GB and more, including unified memory. Runs all three tiers.",
 };
 ---
 
@@ -25,7 +25,7 @@ const CLASS_NOTE: Record<string, string> = {
     <h1 style="margin:12px 0 14px;font-size:2.1rem">Supported GPUs</h1>
     <p class="lede">
       LocalMax computes the tier from the total VRAM in a system, not from one card. Two
-      RTX PRO 6000 cards reach Frontier, and so does a DGX Spark.
+      RTX PRO 6000 cards reach Prospector, and so does a DGX Spark.
     </p>
   </section>
 

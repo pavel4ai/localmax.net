@@ -25,7 +25,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const hardware = JSON.parse(readFileSync(join(ROOT, "benchmarks", "hardware.json"), "utf8"));
 
 const PROFILES = ["llm-entry-fp8", "llm-entry-int4", "llm-enthusiast-fp8", "llm-enthusiast-int4",
-  "llm-frontier-fp8", "vision-entry-fp8", "vision-enthusiast-fp8",
+  "llm-prospector-fp8", "vision-entry-fp8", "vision-enthusiast-fp8",
   "diffusion-entry-fp8", "diffusion-enthusiast-fp8"];
 
 const profiles = Object.fromEntries(

@@ -1,14 +1,14 @@
 {
   "$schema": "../../schemas/profile.schema.json",
   "schema_version": "1.0.0",
-  "id": "diffusion-frontier-fp8",
+  "id": "diffusion-prospector-fp8",
   "version": "0.1.0",
   "frozen": false,
   "published": false,
-  "display_name": "Diffusion \u00b7 Frontier \u00b7 FP8",
+  "display_name": "Diffusion \u00b7 Prospector \u00b7 FP8",
   "summary": "Text to image at 1024 by 1024, sized to fill 64 GB.",
   "category": "diffusion",
-  "tier": "frontier",
+  "tier": "prospector",
   "lane": "fp8",
   "requirements": {
     "min_vram_bytes": 68719476736,
@@ -27,7 +27,9 @@
     ],
     "gpu_count": [
       1,
-      2
+      2,
+      4,
+      8
     ],
     "expected_runtime_minutes": 14,
     "expected_download_bytes": 14173392076
@@ -179,6 +181,7 @@
     "This profile is a release candidate. The runtime is pinned. The model revision is not final. This leaderboard is provisional.",
     "Ranked on seconds for each step. That value does not change if the resolution or the step count changes. Images for each minute comes from it.",
     "Diffusion is compute-bound. The LLM profiles are bandwidth-bound. This is deliberate.",
-    "CPU offload is off, and a gate enforces it. A run that offloads measures the host as well as the GPU. LocalMax publishes it but does not rank it."
+    "CPU offload is off, and a gate enforces it. A run that offloads measures the host as well as the GPU. LocalMax publishes it but does not rank it.",
+    "This tier accepts a cluster. LocalMax computes the tier from the total VRAM across all nodes, so eight DGX Sparks are one Prospector system. It ranks each GPU count and each parallelism mode separately, because the network fabric changes the result."
   ]
 }

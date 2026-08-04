@@ -106,7 +106,7 @@ export const SERIES = [
 export const TIER_COLOR: Record<string, string> = {
   entry: SERIES[0],
   enthusiast: SERIES[1],
-  frontier: SERIES[2],
+  prospector: SERIES[2],
 };
 
 export function axisFormat(value: number): string {
