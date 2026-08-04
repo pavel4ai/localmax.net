@@ -39,10 +39,9 @@
       "enum": [
         "fp8",
         "int4",
-        "nvfp4",
-        "bf16"
+        "nvfp4"
       ],
-      "description": "Quantization lane. Each is ranked separately. 'fp8' is the default and needs Ada or newer. 'int4' has the widest hardware support and includes Ampere. 'nvfp4' needs Blackwell. 'bf16' is reserved."
+      "description": "Quantization lane. Each is ranked separately. 'fp8' is the default and needs Ada or newer. 'int4' has the widest hardware support and includes Ampere. 'nvfp4' needs Blackwell."
     },
     "precision": {
       "type": "string",
@@ -54,7 +53,8 @@
         "int4_awq",
         "int4_gptq",
         "int8"
-      ]
+      ],
+      "description": "The numeric format of the model weights. Not a lane. bf16 and fp16 remain valid for a stored model file, but no lane ranks them."
     },
     "parallelism": {
       "type": "string",

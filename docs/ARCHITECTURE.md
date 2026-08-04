@@ -52,8 +52,6 @@ A cluster counts as one system — LocalMax adds the VRAM of every node.
 Vision and Diffusion follow the same tier and lane structure. Vision reuses the LLM tier
 models where they are multimodal, so a contributor downloads one set of weights.
 
-BF16 is a reserved fourth lane. The schema accepts it; no BF16 profile ships in v1.
-
 Ampere has no FP8 hardware, so an RTX 3090 cannot enter the default lane at all. INT4 is the
 lane with the widest reach and is where those cards appear. The site states this wherever a
 lane is offered, rather than leaving a 3090 owner to infer it from an empty leaderboard.

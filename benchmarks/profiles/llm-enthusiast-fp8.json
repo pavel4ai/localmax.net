@@ -239,6 +239,6 @@
   "notes": [
     "This profile is a release candidate. The runtime is pinned. The model revision is not final. This leaderboard is provisional.",
     "Decode and prefill are separate values. Decode follows memory bandwidth. Prefill follows compute.",
-    "BF16 lane. Ranked only against other BF16 results, because comparing precisions would compare different numerical workloads."
+    "FP8 lane. LocalMax ranks it only against other FP8 results. Different precisions are different work."
   ]
 }

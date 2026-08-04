@@ -152,7 +152,7 @@ export interface Profile {
   summary?: string;
   category: "llm" | "vision" | "diffusion";
   tier: "entry" | "enthusiast" | "prospector";
-  lane: "fp8" | "int4" | "nvfp4" | "bf16";
+  lane: "fp8" | "int4" | "nvfp4";
   hash: string;
   requirements: {
     min_vram_bytes: number;
@@ -203,7 +203,7 @@ export interface GpuSpec {
   supports_fp8: boolean;
   supports_nvfp4: boolean;
   memory_type: "discrete" | "unified";
-  class: string;
+  highest_tier_alone: string;
   cpu_arch?: string;
   notes?: string[];
   source?: string;

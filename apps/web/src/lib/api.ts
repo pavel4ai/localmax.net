@@ -86,7 +86,7 @@ export interface ResultRow {
   profile_version: string;
   category: "llm" | "vision" | "diffusion";
   tier: "entry" | "enthusiast" | "prospector";
-  lane: "fp8" | "int4" | "nvfp4" | "bf16";
+  lane: "fp8" | "int4" | "nvfp4";
   gpu_key: string;
   gpu_name: string;
   gpu_count: number;
@@ -153,7 +153,7 @@ export interface ProfileSummary {
   summary: string | null;
   category: "llm" | "vision" | "diffusion";
   tier: "entry" | "enthusiast" | "prospector";
-  lane: "fp8" | "int4" | "nvfp4" | "bf16";
+  lane: "fp8" | "int4" | "nvfp4";
   version: string;
   frozen: boolean;
   hash: string;
@@ -179,7 +179,7 @@ export interface GpuSummary {
   supports_fp8: boolean;
   supports_nvfp4: boolean;
   memory_type: "discrete" | "unified";
-  class: string;
+  highest_tier_alone: string;
   notes?: string[];
   result_count: number;
   ranked_count: number;

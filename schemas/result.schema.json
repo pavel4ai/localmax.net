@@ -51,7 +51,7 @@
       "properties": {
         "id": {
           "type": "string",
-          "pattern": "^(llm|vision|diffusion)-(entry|enthusiast|prospector)-(fp8|int4|nvfp4|bf16)$"
+          "pattern": "^(llm|vision|diffusion)-(entry|enthusiast|prospector)-(fp8|int4|nvfp4)$"
         },
         "version": {
           "$ref": "common.schema.json#/$defs/semver"

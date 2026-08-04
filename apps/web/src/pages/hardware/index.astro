@@ -11,11 +11,13 @@ const data = await api<{
 const gpus = data?.gpus ?? [];
 const unregistered = data?.unregistered ?? [];
 
-const classes = ["entry", "enthusiast", "prospector"] as const;
-const CLASS_NOTE: Record<string, string> = {
-  entry: "12 GB to 17 GB. Runs the Entry tier.",
-  enthusiast: "24 GB to 48 GB. Runs Entry and Enthusiast.",
-  prospector: "64 GB and more, including unified memory. Runs all three tiers.",
+const groups = ["entry", "enthusiast", "prospector"] as const;
+// Grouped by the largest tier one card can fill by itself. This is VRAM, not price: an
+// RTX 4080 SUPER has 16 GB, so on its own it reaches Entry. Two of them reach Enthusiast.
+const GROUP_NOTE: Record<string, string> = {
+  entry: "12 GB to 17 GB. One card fills the Entry tier.",
+  enthusiast: "24 GB to 48 GB. One card fills Entry and Enthusiast.",
+  prospector: "64 GB and more. One card fills every tier.",
 };
 ---
 
@@ -29,14 +31,14 @@ const CLASS_NOTE: Record<string, string> = {
     </p>
   </section>
 
-  {classes.map((cls) => {
-    const list = gpus.filter((g) => g.class === cls);
+  {groups.map((cls) => {
+    const list = gpus.filter((g) => g.highest_tier_alone === cls);
     if (list.length === 0) return null;
     return (
       <section class="section wrap">
         <div class="section-head">
-          <h2>{TIER_LABEL[cls]} class</h2>
-          <span class="muted" style="font-size:13px">{CLASS_NOTE[cls]}</span>
+          <h2>Fills {TIER_LABEL[cls]} alone</h2>
+          <span class="muted" style="font-size:13px">{GROUP_NOTE[cls]}</span>
         </div>
         <div class="table-scroll">
           <table>
@@ -61,7 +63,7 @@ const CLASS_NOTE: Record<string, string> = {
                   <td class="num dim">{g.default_power_limit_w} W</td>
                   <td class="dim">{g.architecture}{g.memory_type === "unified" ? " · unified" : ""}</td>
                   <td class="dim">
-                    BF16 · INT4{g.supports_nvfp4 ? " · NVFP4" : ""}
+                    {[g.supports_fp8 ? "FP8" : null, "INT4", g.supports_nvfp4 ? "NVFP4" : null].filter(Boolean).join(" · ")}
                   </td>
                   <td class="dim">{g.eligible_tiers.map((t) => TIER_LABEL[t]).join(", ")}</td>
                   <td class="num">{g.result_count > 0 ? compact(g.result_count) : <span class="muted">—</span>}</td>

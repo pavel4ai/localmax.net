@@ -126,7 +126,6 @@ export const LANE_LABEL: Record<string, string> = {
   fp8: "FP8",
   int4: "INT4",
   nvfp4: "NVFP4",
-  bf16: "BF16",
 };
 
 /** Which hardware each lane can run. Shown wherever a lane is offered. */
@@ -134,7 +133,6 @@ export const LANE_HARDWARE: Record<string, string> = {
   fp8: "Ada and newer",
   int4: "Ampere and newer",
   nvfp4: "Blackwell only",
-  bf16: "reserved",
 };
 
 export const TIER_VRAM: Record<string, string> = {

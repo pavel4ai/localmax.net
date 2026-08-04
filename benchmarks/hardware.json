@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "note": "Registry of GPUs LocalMax recognises. Tier eligibility is computed from TOTAL VRAM across the GPUs in a system, not from a single card, so 2x RTX PRO 6000 qualifies for Prospector. A cluster counts the same way: 8 DGX Sparks are one Prospector system. Every bandwidth and VRAM figure must cite a manufacturer specification in `source`; entries marked source 'unverified' are used for display only and are excluded from any bandwidth-normalised view until confirmed.",
+  "note": "Registry of GPUs LocalMax recognises. `highest_tier_alone` is the largest tier one of these cards can fill by itself. It is computed from VRAM and is not a market segment: an RTX 4080 SUPER has 16 GB, so alone it reaches Entry only, and two of them reach Enthusiast. Tier eligibility is computed from TOTAL VRAM across the GPUs in a system, not from a single card, so 2x RTX PRO 6000 qualifies for Prospector. A cluster counts the same way: 8 DGX Sparks are one Prospector system. Every bandwidth and VRAM figure must cite a manufacturer specification in `source`; entries marked source 'unverified' are used for display only and are excluded from any bandwidth-normalised view until confirmed.",
   "tiers": {
     "entry": {
       "min_vram_bytes": 12884901888,
@@ -31,8 +31,8 @@
       "supports_fp8": false,
       "supports_nvfp4": false,
       "memory_type": "discrete",
-      "class": "entry",
-      "source": "unverified"
+      "source": "unverified",
+      "highest_tier_alone": "entry"
     },
     {
       "key": "rtx-4060-ti-16gb",
@@ -46,8 +46,8 @@
       "supports_fp8": true,
       "supports_nvfp4": false,
       "memory_type": "discrete",
-      "class": "entry",
-      "source": "unverified"
+      "source": "unverified",
+      "highest_tier_alone": "entry"
     },
     {
       "key": "rtx-4070",
@@ -61,8 +61,8 @@
       "supports_fp8": true,
       "supports_nvfp4": false,
       "memory_type": "discrete",
-      "class": "entry",
-      "source": "unverified"
+      "source": "unverified",
+      "highest_tier_alone": "entry"
     },
     {
       "key": "rtx-4080-super",
@@ -76,8 +76,8 @@
       "supports_fp8": true,
       "supports_nvfp4": false,
       "memory_type": "discrete",
-      "class": "entry",
-      "source": "unverified"
+      "source": "unverified",
+      "highest_tier_alone": "entry"
     },
     {
       "key": "rtx-5070",
@@ -91,8 +91,8 @@
       "supports_fp8": true,
       "supports_nvfp4": true,
       "memory_type": "discrete",
-      "class": "entry",
-      "source": "unverified"
+      "source": "unverified",
+      "highest_tier_alone": "entry"
     },
     {
       "key": "rtx-5070-ti",
@@ -106,8 +106,8 @@
       "supports_fp8": true,
       "supports_nvfp4": true,
       "memory_type": "discrete",
-      "class": "entry",
-      "source": "unverified"
+      "source": "unverified",
+      "highest_tier_alone": "entry"
     },
     {
       "key": "rtx-5080",
@@ -121,8 +121,8 @@
       "supports_fp8": true,
       "supports_nvfp4": true,
       "memory_type": "discrete",
-      "class": "entry",
-      "source": "unverified"
+      "source": "unverified",
+      "highest_tier_alone": "entry"
     },
     {
       "key": "rtx-3090",
@@ -136,11 +136,11 @@
       "supports_fp8": false,
       "supports_nvfp4": false,
       "memory_type": "discrete",
-      "class": "enthusiast",
       "source": "unverified",
       "notes": [
-        "No FP8 or FP4 hardware. Runs the base and int4 lanes only."
-      ]
+        "No FP8 or FP4 hardware. This card runs the INT4 lane only."
+      ],
+      "highest_tier_alone": "enthusiast"
     },
     {
       "key": "rtx-3090-ti",
@@ -154,8 +154,8 @@
       "supports_fp8": false,
       "supports_nvfp4": false,
       "memory_type": "discrete",
-      "class": "enthusiast",
-      "source": "unverified"
+      "source": "unverified",
+      "highest_tier_alone": "enthusiast"
     },
     {
       "key": "rtx-4090",
@@ -169,8 +169,8 @@
       "supports_fp8": true,
       "supports_nvfp4": false,
       "memory_type": "discrete",
-      "class": "enthusiast",
-      "source": "unverified"
+      "source": "unverified",
+      "highest_tier_alone": "enthusiast"
     },
     {
       "key": "rtx-5090",
@@ -184,8 +184,8 @@
       "supports_fp8": true,
       "supports_nvfp4": true,
       "memory_type": "discrete",
-      "class": "enthusiast",
-      "source": "unverified"
+      "source": "unverified",
+      "highest_tier_alone": "enthusiast"
     },
     {
       "key": "rtx-a6000",
@@ -199,8 +199,8 @@
       "supports_fp8": false,
       "supports_nvfp4": false,
       "memory_type": "discrete",
-      "class": "enthusiast",
-      "source": "unverified"
+      "source": "unverified",
+      "highest_tier_alone": "enthusiast"
     },
     {
       "key": "rtx-6000-ada",
@@ -214,8 +214,8 @@
       "supports_fp8": true,
       "supports_nvfp4": false,
       "memory_type": "discrete",
-      "class": "enthusiast",
-      "source": "unverified"
+      "source": "unverified",
+      "highest_tier_alone": "enthusiast"
     },
     {
       "key": "l40s",
@@ -229,8 +229,8 @@
       "supports_fp8": true,
       "supports_nvfp4": false,
       "memory_type": "discrete",
-      "class": "enthusiast",
-      "source": "unverified"
+      "source": "unverified",
+      "highest_tier_alone": "enthusiast"
     },
     {
       "key": "rtx-pro-6000-blackwell",
@@ -244,12 +244,12 @@
       "supports_fp8": true,
       "supports_nvfp4": true,
       "memory_type": "discrete",
-      "class": "prospector",
       "source": "unverified",
       "notes": [
         "No NVLink. A two-card result is PCIe-connected, so PCIe generation and width are recorded and shown.",
         "Two cards give 192 GB total and qualify for Frontier; a single card at 96 GB also qualifies."
-      ]
+      ],
+      "highest_tier_alone": "prospector"
     },
     {
       "key": "dgx-spark-gb10",
@@ -263,7 +263,6 @@
       "supports_fp8": true,
       "supports_nvfp4": true,
       "memory_type": "unified",
-      "class": "prospector",
       "source": "unverified",
       "cpu_arch": "aarch64",
       "notes": [
@@ -271,7 +270,8 @@
         "Power telemetry is SoC-module level, not GPU board level. Never ranked for energy against a discrete card.",
         "aarch64. Requires the linux/arm64 container.",
         "Low bandwidth relative to its capacity: expect strong Frontier-tier capacity results and modest decode throughput."
-      ]
+      ],
+      "highest_tier_alone": "prospector"
     }
   ]
 }
