@@ -18,7 +18,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 PROFILES = ROOT / "benchmarks" / "profiles"
-TEMPLATE = PROFILES / "llm-entry-base.json"
+TEMPLATE = PROFILES / "llm-entry-fp8.json"
 
 GB = 1024**3
 
@@ -26,11 +26,12 @@ GB = 1024**3
 TIERS = {
     "entry": (12 * GB, 16 * GB, [1], ["ampere", "ada", "blackwell", "blackwell-gb10", "hopper"]),
     "enthusiast": (24 * GB, 32 * GB, [1], ["ampere", "ada", "blackwell", "blackwell-gb10", "hopper"]),
-    "prospector": (64 * GB, 64 * GB, [1, 2], ["blackwell", "blackwell-gb10", "hopper"]),
+    "prospector": (64 * GB, 64 * GB, [1, 2, 4, 8], ["blackwell", "blackwell-gb10", "hopper"]),
 }
 
 LANES = {
-    "base": ("bf16", "BF16", ["ampere", "ada", "blackwell", "blackwell-gb10", "hopper"]),
+    # Ampere has no FP8 hardware, so it appears only in the int4 lane.
+    "fp8": ("fp8_e4m3", "FP8", ["ada", "blackwell", "blackwell-gb10", "hopper"]),
     "int4": ("int4_awq", "INT4", ["ampere", "ada", "blackwell", "blackwell-gb10", "hopper"]),
     "nvfp4": ("nvfp4", "NVFP4", ["blackwell", "blackwell-gb10"]),
 }
@@ -45,7 +46,7 @@ MODELS: dict[tuple[str, str, str], dict] = {
         "repository": "nvidia/Qwen3-8B-NVFP4", "parameters_b": 8.0,
         "weights_bytes": 5 * GB, "license": "Apache-2.0",
     },
-    ("llm", "enthusiast", "base"): {
+    ("llm", "enthusiast", "fp8"): {
         "repository": "Qwen/Qwen3-8B", "parameters_b": 8.0,
         "weights_bytes": 16 * GB, "license": "Apache-2.0",
     },
@@ -57,7 +58,7 @@ MODELS: dict[tuple[str, str, str], dict] = {
         "repository": "nvidia/Qwen3-32B-NVFP4", "parameters_b": 32.0,
         "weights_bytes": 18 * GB, "license": "Apache-2.0",
     },
-    ("llm", "prospector", "base"): {
+    ("llm", "prospector", "fp8"): {
         "repository": "Qwen/Qwen3-32B", "parameters_b": 32.0,
         "weights_bytes": 64 * GB, "license": "Apache-2.0",
     },
@@ -69,27 +70,27 @@ MODELS: dict[tuple[str, str, str], dict] = {
         "repository": "nvidia/Qwen2.5-72B-Instruct-NVFP4", "parameters_b": 72.0,
         "weights_bytes": 40 * GB, "license": "Qwen",
     },
-    ("vision", "entry", "base"): {
+    ("vision", "entry", "fp8"): {
         "repository": "Qwen/Qwen3-VL-4B-Instruct", "parameters_b": 4.0,
         "weights_bytes": 9 * GB, "license": "Apache-2.0",
     },
-    ("vision", "enthusiast", "base"): {
+    ("vision", "enthusiast", "fp8"): {
         "repository": "Qwen/Qwen3-VL-8B-Instruct", "parameters_b": 8.0,
         "weights_bytes": 17 * GB, "license": "Apache-2.0",
     },
-    ("vision", "prospector", "base"): {
+    ("vision", "prospector", "fp8"): {
         "repository": "Qwen/Qwen3-VL-32B-Instruct", "parameters_b": 32.0,
         "weights_bytes": 66 * GB, "license": "Apache-2.0",
     },
-    ("diffusion", "entry", "base"): {
+    ("diffusion", "entry", "fp8"): {
         "repository": "stabilityai/stable-diffusion-xl-base-1.0", "parameters_b": 3.5,
         "weights_bytes": 7 * GB, "license": "CreativeML-Open-RAIL-M++",
     },
-    ("diffusion", "enthusiast", "base"): {
+    ("diffusion", "enthusiast", "fp8"): {
         "repository": "stabilityai/stable-diffusion-3.5-large", "parameters_b": 8.1,
         "weights_bytes": 17 * GB, "license": "Stability-Community",
     },
-    ("diffusion", "prospector", "base"): {
+    ("diffusion", "prospector", "fp8"): {
         "repository": "black-forest-labs/FLUX.1-schnell", "parameters_b": 12.0,
         "weights_bytes": 24 * GB, "license": "Apache-2.0",
     },
@@ -97,11 +98,11 @@ MODELS: dict[tuple[str, str, str], dict] = {
 
 # Which profiles ship at launch. Everything else is scaffolded but unpublished.
 LAUNCH_SET = {
-    ("llm", "entry", "base"), ("llm", "entry", "int4"),
-    ("llm", "enthusiast", "base"), ("llm", "enthusiast", "int4"),
-    ("llm", "prospector", "base"),
-    ("vision", "entry", "base"), ("vision", "enthusiast", "base"),
-    ("diffusion", "entry", "base"), ("diffusion", "enthusiast", "base"),
+    ("llm", "entry", "fp8"), ("llm", "entry", "int4"),
+    ("llm", "enthusiast", "fp8"), ("llm", "enthusiast", "int4"),
+    ("llm", "prospector", "fp8"),
+    ("vision", "entry", "fp8"), ("vision", "enthusiast", "fp8"),
+    ("diffusion", "entry", "fp8"), ("diffusion", "enthusiast", "fp8"),
 }
 
 CATEGORY_LABEL = {"llm": "LLM", "vision": "Vision", "diffusion": "Diffusion"}
@@ -330,8 +331,8 @@ def build(category: str, tier: str, lane: str, template: dict) -> dict:
             p["runtime"]["flags"]["max-model-len"] = 32768
             p["notes"] = [
                 "Release candidate. Model revision, vLLM version and AIPerf commit are PENDING until the bake-off.",
-                "A 32B at BF16 is roughly 64 GB, which fits both a DGX Spark and a 2x96 GB workstation. A 70B BF16 baseline was rejected because it would exclude DGX Spark from its own tier.",
-                "Both 1 and 2 GPU results are accepted, ranked separately. Tensor parallelism is recorded as a comparability key.",
+                "A 32B model at FP8 fits a DGX Spark and a dual RTX PRO 6000 workstation. A 70B model would exclude the Spark from its own tier.",
+                "This tier accepts a cluster. LocalMax computes the tier from the total VRAM across all nodes. It ranks each GPU count and each parallelism mode separately.",
                 "RTX PRO 6000 Blackwell has no NVLink, so a 2-GPU result there communicates over PCIe. PCIe generation and width are recorded and shown on the result page.",
             ]
         else:

@@ -20,7 +20,7 @@ specific reason for any that you do not.
 
 ```bash
 docker run --rm --gpus all -v ~/.localmax:/cache \
-  ghcr.io/pavel4ai/localmax-llm:latest run llm-entry-base
+  ghcr.io/pavel4ai/localmax-llm:latest run llm-entry-fp8
 ```
 
 Weights land in `~/.localmax` and are reused across profiles, so the second run of a tier
@@ -32,8 +32,7 @@ Useful flags:
 | Flag | Purpose |
 |---|---|
 | `--gpus N` | Number of GPUs. Defaults to the smallest count the profile permits. |
-| `--alias NAME` | Public display alias. Optional. |
-| `--system-name NAME` | A name for this build, shown instead of the run ID. |
+| `--notes TEXT` | A public note on the result. |
 | `--cooling air\|aio\|custom-loop\|blower\|passive` | Declared label. Never affects a score. |
 | `--tuning stock\|undervolted\|overclocked\|power-limited` | Declared label, cross-checked against measured clocks. |
 | `--notes TEXT` | A public note on the result. |
@@ -61,12 +60,16 @@ proceeds. No account, no email, no GitHub token.
 
 ## Multi-GPU
 
-Frontier profiles accept one or two GPUs, ranked separately. Tensor parallelism is a
+Prospector profiles accept 1, 2, 4 or 8 GPUs, ranked separately. Tensor parallelism is a
 comparability key, so a `tp2` result never shares a leaderboard with a single-GPU one.
+
+A cluster counts as one system. LocalMax adds the VRAM of every node to decide the tier, so
+eight DGX Sparks are one Prospector system. The interconnect is recorded, because across
+nodes the network fabric governs how well the run scales.
 
 ```bash
 docker run --rm --gpus all -v ~/.localmax:/cache \
-  ghcr.io/pavel4ai/localmax-llm:latest run llm-frontier-base --gpus 2
+  ghcr.io/pavel4ai/localmax-llm:latest run llm-prospector-fp8 --gpus 2
 ```
 
 On an RTX PRO 6000 Blackwell pair there is no NVLink, so the two cards communicate over
@@ -81,7 +84,7 @@ differ and both are visible on the result:
 - Power is measured at the SoC module, not a GPU board. Those are different physical
   quantities, so a Spark result is never ranked for energy against a discrete card.
 - Memory is unified. Capacity is enormous and bandwidth is modest, so expect strong
-  Frontier-tier capacity results and comparatively low decode throughput. That is the real
+  Prospector-tier capacity results and comparatively low decode throughput. That is the real
   shape of the hardware, not a defect in the measurement.
 
 ## When something fails

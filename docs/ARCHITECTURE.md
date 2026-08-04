@@ -8,12 +8,14 @@ wherever they disagree; those documents are retained as the original vision and 
 | # | Decision | Why |
 |---|---|---|
 | 1 | **Three VRAM tiers per category**, not one profile | A single 4B profile across 12 GB → 192 GB measures memory bandwidth and nothing else. The second RTX PRO 6000 would sit idle and DGX Spark would rank below an RTX 3060. |
-| 2 | **Three quantization lanes**, separately ranked | BF16 runs everywhere and is the fair cross-generation baseline. INT4 runs on Ampere and up. NVFP4 is Blackwell-only. Ranking them together would compare different numerical workloads. |
+| 2 | **Three quantization lanes**, separately ranked | FP8 is the modern default and needs Ada or newer. INT4 reaches furthest and is the only lane an RTX 3090 can enter. NVFP4 is Blackwell-only. Ranking them together would compare different numerical workloads. |
 | 3 | **Diffusion is text-to-image in v1**, video deferred | T2I is compute-bound, the exact inverse of the bandwidth-bound LLM test, so it is the counterweight that stops the site being one bandwidth chart in three costumes. It also runs in ~30 s, which is what populates a leaderboard. |
 | 4 | **D1 is the live store; Git is a batched archive** | A pull request per submission cannot absorb thousands of concurrent users. See §4. |
 | 5 | **Prefill and decode throughput are reported separately** | This is the metric that distinguishes compute-rich from bandwidth-rich hardware. TTFT alone conflates prefill with scheduling overhead. |
 | 6 | **Energy is typed, not just measured** | `gpu_board_w` on a discrete card and `soc_module_w` on GB10 are different physical quantities. They are never ranked against each other. |
 | 7 | **arm64 is a first-class target** | DGX Spark is GB10/aarch64. Every container is multi-arch from day one; retrofitting is worse. |
+| 8 | **Home hardware is the scope** | LocalMax may accept a data-centre result but reserves the right not to show or rank it. Stating the boundary once is better than a contributor discovering it after a run. |
+| 9 | **Identity is generated, never typed** | A machine is published as `Rocinante-K7X2P`, derived from a key that never leaves it. There is no free-text name field, because a field that exists eventually holds something identifying. The five-character code is the contributor's own handle at `/systems/CODE`. |
 
 ## 2. The profile matrix
 
@@ -25,30 +27,36 @@ category · tier · lane · profile_version · runtime · runtime_version · gpu
 ```
 
 Tier is defined by the VRAM the ranked run is meant to *fill*, so each lane gets a model
-sized for that tier rather than leaving the card idle.
+sized for that tier rather than leaving the card idle. Tier comes from **total VRAM across
+the whole system** — every GPU, across every node. Two RTX PRO 6000 cards and eight DGX
+Sparks are each one Prospector system.
 
 ### LLM
 
 | Profile ID | Tier | Min VRAM | Model class | Precision | Runs on |
 |---|---|---|---|---|---|
-| `llm-entry-base` | Entry | 12 GB | 4B | BF16 | everything |
-| `llm-entry-int4` | Entry | 12 GB | 8B | INT4 (AWQ) | Ampere+ |
+| `llm-entry-fp8` | Entry | 12 GB | 4B | FP8 | Ada+ |
+| `llm-entry-int4` | Entry | 12 GB | 8B | INT4 (AWQ) | Ampere+ (includes RTX 3090) |
 | `llm-entry-nvfp4` | Entry | 12 GB | 8B | NVFP4 | Blackwell |
-| `llm-enthusiast-base` | Enthusiast | 24 GB | 8B | BF16 | 3090, 4090, 5090, ↑ |
-| `llm-enthusiast-int4` | Enthusiast | 24 GB | 30B | INT4 (AWQ) | 3090, 4090, 5090, ↑ |
-| `llm-enthusiast-nvfp4` | Enthusiast | 24 GB | 30B | NVFP4 | 5090, RTX PRO 6000, GB10 |
-| `llm-frontier-base` | Frontier | 64 GB | 30B | BF16 | GB10, RTX PRO 6000 ×1/×2 |
-| `llm-frontier-int4` | Frontier | 64 GB | 70B | INT4 (AWQ) | GB10, RTX PRO 6000 ×1/×2 |
-| `llm-frontier-nvfp4` | Frontier | 64 GB | 70B | NVFP4 | GB10, RTX PRO 6000 ×1/×2 |
+| `llm-enthusiast-fp8` | Enthusiast | 24 GB | 8B | FP8 | 4090, 5090, ↑ |
+| `llm-enthusiast-int4` | Enthusiast | 24 GB | 32B | INT4 (AWQ) | 3090, 4090, 5090, ↑ |
+| `llm-enthusiast-nvfp4` | Enthusiast | 24 GB | 32B | NVFP4 | 5090, RTX PRO 6000, GB10 |
+| `llm-prospector-fp8` | Prospector | 64 GB | 32B | FP8 | GB10, RTX PRO 6000, clusters |
+| `llm-prospector-int4` | Prospector | 64 GB | 72B | INT4 (AWQ) | GB10, RTX PRO 6000, clusters |
+| `llm-prospector-nvfp4` | Prospector | 64 GB | 72B | NVFP4 | GB10, RTX PRO 6000, clusters |
 
-Frontier baseline is a 30B at BF16 (~60 GB) on purpose: it fits both DGX Spark's 128 GB
-unified memory and the 2×96 GB workstation. A 70B BF16 baseline would exclude Spark.
+The Prospector model is a 32B at FP8 on purpose: it fits both DGX Spark's 128 GB unified
+memory and a 2×96 GB workstation. A 70B model would exclude Spark from its own tier.
+A cluster counts as one system — LocalMax adds the VRAM of every node.
 
 Vision and Diffusion follow the same tier and lane structure. Vision reuses the LLM tier
 models where they are multimodal, so a contributor downloads one set of weights.
 
-FP8 is a reserved fourth lane. The schema accepts it; no FP8 profile ships in v1, because
-INT4 already covers every target GPU and NVFP4 already covers the Blackwell showcase.
+BF16 is a reserved fourth lane. The schema accepts it; no BF16 profile ships in v1.
+
+Ampere has no FP8 hardware, so an RTX 3090 cannot enter the default lane at all. INT4 is the
+lane with the widest reach and is where those cards appear. The site states this wherever a
+lane is offered, rather than leaving a 3090 owner to infer it from an empty leaderboard.
 
 ### Fixed inputs
 
@@ -63,12 +71,12 @@ Everything that could change a number is pinned in the profile file and hashed:
 
 ### Launch set
 
-Nine leaderboards, not twenty-seven — all baseline lane, plus the two most popular INT4:
+Nine leaderboards, not twenty-seven — the FP8 lane, plus the two most popular INT4:
 
 ```
-llm-entry-base · llm-enthusiast-base · llm-frontier-base
-vision-entry-base · vision-enthusiast-base
-diffusion-entry-base · diffusion-enthusiast-base
+llm-entry-fp8 · llm-enthusiast-fp8 · llm-prospector-fp8
+vision-entry-fp8 · vision-enthusiast-fp8
+diffusion-entry-fp8 · diffusion-enthusiast-fp8
 llm-entry-int4 · llm-enthusiast-int4
 ```
 

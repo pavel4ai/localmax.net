@@ -21,11 +21,15 @@ result. Everyone runs the same test, so the numbers mean something.
 
 ```bash
 docker run --rm --gpus all -v ~/.localmax:/cache \
-  ghcr.io/pavel4ai/localmax-llm:latest run llm-entry-base
+  ghcr.io/pavel4ai/localmax-llm:latest run llm-entry-fp8
 ```
 
-What is fixed: model, revision, quantization, runtime, flags, prompts, input/output token
-lengths, image set, diffusion steps and seeds.
+LocalMax targets hardware you can run at home. It may accept a data-centre result, but it
+reserves the right not to show it and not to rank it.
+
+What is fixed: model, revision, precision, runtime, flags, prompts, input and output token
+counts, image set, diffusion steps and seeds. Your machine is published under a generated
+name such as `Rocinante-K7X2P`, derived from a key that never leaves it.
 
 What varies: **your hardware, and therefore your results** — tokens/s, TTFT, inter-token
 latency, prefill throughput, seconds per diffusion step, images/minute, peak VRAM, watts,
@@ -37,11 +41,15 @@ Three categories × three VRAM tiers × three quantization lanes. A tier is defi
 VRAM the ranked run is meant to *fill*, so every class of hardware has a workload that
 actually stresses it.
 
-| Tier | Min VRAM | Baseline lane (BF16 — universal, ranked) | INT4 lane (Ampere+) | NVFP4 lane (Blackwell) |
+| Tier | Min VRAM | FP8 lane (default, Ada+) | INT4 lane (Ampere+) | NVFP4 lane (Blackwell) |
 |---|---|---|---|---|
-| **Entry** | 12 GB | 4B-class | 8B-class | 8B-class |
-| **Enthusiast** | 24 GB | 8B-class | 30B-class | 30B-class |
-| **Frontier** | 64 GB | 30B-class | 70B-class | 70B-class |
+| **Entry** | 12 GB | up to 4B parameters | 8B | 8B |
+| **Enthusiast** | 24 GB | up to 8B parameters | 32B | 32B |
+| **Prospector** | 64 GB | up to 32B parameters | 72B | 72B |
+
+INT4 has the widest hardware reach and is the only lane that includes Ampere, so an
+RTX 3090 appears there. Tier comes from **total VRAM across the whole system**, including
+multi-GPU and clusters: eight DGX Sparks are one Prospector system.
 
 Results are only ranked against results in the same **profile** — same category, tier,
 lane, runtime, GPU count and parallelism. Cross-lane and cross-tier comparison is shown,
@@ -56,7 +64,7 @@ See [`benchmarks/profiles/`](benchmarks/profiles/) for the immutable profile def
 |---|---|---|
 | Entry | RTX 3060 12 GB, 4060 Ti 16 GB, 4070, 5070 | Entry |
 | Enthusiast | RTX 3090, 4090, 5090 | Entry, Enthusiast |
-| Frontier | RTX PRO 6000 Blackwell (×1, ×2), DGX Spark (GB10) | all three |
+| Prospector | RTX PRO 6000 Blackwell (×1, ×2), DGX Spark (GB10), clusters | all three |
 
 NVIDIA only in v1. Linux x86_64 and **arm64 (DGX Spark / GB10)**. WSL2 is experimental.
 

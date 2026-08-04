@@ -6,7 +6,7 @@ You do not need to contribute code, or even a GitHub account. Run the container 
 
 ```bash
 docker run --rm --gpus all -v ~/.localmax:/cache \
-  ghcr.io/pavel4ai/localmax-llm:latest run llm-entry-base
+  ghcr.io/pavel4ai/localmax-llm:latest run llm-entry-fp8
 ```
 
 Read [`docs/RUNNING.md`](docs/RUNNING.md) first.

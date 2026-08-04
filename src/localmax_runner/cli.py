@@ -405,7 +405,7 @@ def cmd_inspect(args: argparse.Namespace) -> int:
     from .naming import derive
 
     submitter = document["submitter"]
-    name, code, label = derive(submitter["system_key"])
+    _name, code, label = derive(submitter["system_key"])
     identity = Table(show_header=False, box=None, pad_edge=False)
     identity.add_column(style="dim", width=16)
     identity.add_column()
