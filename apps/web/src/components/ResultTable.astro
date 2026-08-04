@@ -16,7 +16,7 @@ const {
   showRank = false,
   showProfile = true,
   highlight,
-  emptyMessage = "No results match these filters yet.",
+  emptyMessage = "No results match these filters.",
 } = Astro.props;
 
 // The category of the first row decides which measurement columns are meaningful. A mixed
@@ -84,7 +84,7 @@ const single = categories.size === 1 ? [...categories][0] : null;
             <td class="num dim">{bytes(r.vram_peak_bytes)}</td>
             <td class="num dim" title={
               r.power_domain === "soc_module"
-                ? "SoC module power on a unified-memory system. Not comparable with discrete GPU board power."
+                ? "SoC module power on a unified-memory system. Not comparable with GPU board power."
                 : r.power_domain === "unavailable" ? "No power telemetry available." : "GPU board power."
             }>
               {watts(r.power_avg_w)}{r.power_domain === "soc_module" && <span class="muted"> soc</span>}

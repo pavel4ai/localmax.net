@@ -29,9 +29,7 @@ const endpoints = [
     <div class="eyebrow">Open data</div>
     <h1 style="margin:12px 0 16px;font-size:2.1rem">Take the data</h1>
     <p class="lede">
-      Everything published here is CC BY 4.0. There is no API key and no registration. If you
-      are building something with it, we would like to hear about it, but you do not need to
-      ask.
+      All published data is CC BY 4.0. There is no API key. There is no registration.
     </p>
 
     <div class="grid grid-4" style="margin-top:28px">
@@ -45,22 +43,22 @@ const endpoints = [
   <section class="section wrap">
     <h2>The archive is Git</h2>
     <p style="margin-top:10px">
-      Accepted manifests are committed to the public repository every hour, one file per
-      result, laid out by profile, version and GPU. That archive is canonical: the live
-      database is an index rebuilt from it, not the other way round.
+      LocalMax commits accepted manifests to the public repository every hour. There is one
+      file for each result, in a directory for its profile, version and GPU. The archive is
+      the record. The live database is an index built from it.
     </p>
     <pre class="cmd">git clone https://github.com/pavel4ai/localmax.net.git
 ls localmax.net/results/llm-entry-base/0.1.0/rtx-4090/</pre>
     <p style="margin-top:14px">
-      Each file is the manifest exactly as it was submitted and signed. Nothing is edited
-      after the fact; a correction is a new result with a finding attached, never a rewrite.
+      Each file is the manifest as submitted and signed. LocalMax does not edit it later. A
+      correction is a new result with a finding, not a change to an old one.
     </p>
   </section>
 
   <section class="section wrap">
     <h2>The read API</h2>
     <p style="margin-top:10px">
-      Public, cached at the edge, CORS-open for GET. Base URL
+      The read API is public. GET requests permit any origin. The base URL is
       <code>https://api.localmax.net</code>.
     </p>
     <div class="table-scroll" style="margin-top:18px">
@@ -83,8 +81,8 @@ curl 'https://api.localmax.net/v1/distribution/llm-entry-base?gpu=rtx-4090'</pre
   <section class="section wrap">
     <h2>Schemas</h2>
     <p style="margin-top:10px">
-      The contracts are the source of truth for the whole project — the runner, the API and CI
-      all validate against these same files.
+      The schemas are the contract for the whole project. The runner, the API and CI all
+      validate against these files.
     </p>
     <ul class="links">
       <li><a href="https://github.com/pavel4ai/localmax.net/blob/main/schemas/result.schema.json">result.schema.json</a> — one benchmark run</li>
@@ -101,10 +99,10 @@ curl 'https://api.localmax.net/v1/distribution/llm-entry-base?gpu=rtx-4090'</pre
         Cite as: <em>Data from LocalMax (localmax.net), CC BY 4.0.</em>
       </p>
       <p style="margin-bottom:0">
-        Results are contributed by the public. A verification state describes the completeness
-        and internal consistency of the evidence, not the honesty of the operator. Filter to
-        <code>verification=verified</code> and <code>ranked=1</code> for the strictest subset,
-        and treat any single result as one sample rather than a specification.
+        The public contributes these results. A verification state describes the evidence,
+        not the honesty of the operator. For the strictest set, filter on
+        <code>verification=verified</code> and <code>ranked=1</code>. Treat one result as one
+        sample, not as a specification.
       </p>
     </div>
   </section>

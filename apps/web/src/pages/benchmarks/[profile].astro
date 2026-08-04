@@ -101,7 +101,7 @@ const workloads = (full?.workloads ?? []) as Array<Record<string, unknown>>;
       data={gpuBars}
       unit={ranking.unit}
       direction={ranking.direction}
-      caption={`Fastest ranked result for each GPU model on ${profile.display_name}.`}
+      caption={`The best ranked result for each GPU model.`}
     />
     <SourceData
       columns={["GPU", "GPUs", "Samples", `Best (${ranking.unit})`, `Mean (${ranking.unit})`]}
@@ -125,7 +125,7 @@ const workloads = (full?.workloads ?? []) as Array<Record<string, unknown>>;
         yLabel={metricLabel(ranking.metric)}
         xUnit="ms"
         yUnit={ranking.unit}
-        caption="Each point is one ranked result. Up and to the left is better: more throughput at lower latency."
+        caption="Each point is one ranked result. Up and to the left is better."
       />
       <SourceData
         columns={["System", "GPU", "Tier", "Latency p50 (ms)", `${metricLabel(ranking.metric)} (${ranking.unit})`]}
@@ -148,8 +148,8 @@ const workloads = (full?.workloads ?? []) as Array<Record<string, unknown>>;
   <section class="section wrap">
     <h2>What is pinned</h2>
     <p class="lede" style="margin-top:8px">
-      Everything below is fixed by the profile and checked on every submission. A result
-      whose runtime flags differ from these is published, but never ranked.
+      The profile fixes all values below. LocalMax checks them at each submission. If the
+      runtime flags do not agree, it publishes the result but does not rank it.
     </p>
 
     <div class="grid grid-2" style="margin-top:22px">

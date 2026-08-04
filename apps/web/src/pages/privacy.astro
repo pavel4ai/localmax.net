@@ -7,51 +7,51 @@ import Layout from "../components/Layout.astro";
     <div class="eyebrow">Privacy</div>
     <h1>Privacy</h1>
     <p class="lede">
-      LocalMax is anonymous by default. No accounts, no email address, no tracking scripts,
-      no analytics. This page is the complete description of what leaves your machine.
+      LocalMax is anonymous. There are no accounts. No email address is needed. The site
+      runs no tracking scripts. This page lists all data that leaves your machine.
     </p>
 
     <h2>What the runner collects</h2>
-    <p>Only what makes a result comparable:</p>
+    <p>LocalMax collects only what makes a result comparable:</p>
     <ul>
-      <li>GPU model, count, VRAM, driver and CUDA version, PCIe link generation and width, power limit and clock configuration</li>
-      <li>CPU model, core count, architecture, total system RAM</li>
-      <li>OS name, kernel version, container runtime version</li>
-      <li>Profile ID and version, container image digest, model revision</li>
-      <li>Every measured metric, the raw per-request records behind them, and the GPU telemetry trace</li>
+      <li>GPU model, count, VRAM, driver, CUDA, PCIe link, power limit and clocks</li>
+      <li>CPU model, core count, architecture and total RAM</li>
+      <li>OS name, kernel version and container runtime version</li>
+      <li>Profile ID and version, container image digest and model revision</li>
+      <li>All measured values, the raw records for each request, and the telemetry</li>
     </ul>
 
     <h2>What it never collects</h2>
     <ul>
-      <li>Hostname, username, or any filesystem path</li>
-      <li>GPU serial numbers, board UUIDs, MAC addresses, or any stable hardware identifier</li>
-      <li>Environment variables, shell history, or data about unrelated processes</li>
-      <li>Your IP address is used transiently for rate limiting and is never stored with a result</li>
+      <li>Hostname, username or any file path</li>
+      <li>GPU serial numbers, board UUIDs, MAC addresses or any fixed hardware identifier</li>
+      <li>Environment variables, shell history or data about other processes</li>
+      <li>LocalMax uses your IP address only to limit request rates. It never stores it with a result.</li>
     </ul>
     <p>
-      Log output is redacted locally before it is written into the evidence bundle: paths,
-      home directories, usernames and anything matching a secret pattern are replaced. The
-      server scans again on arrival and rejects any submission that still contains one.
+      The runner removes paths, home directories, usernames and secrets from logs. It does
+      this on your machine, before it writes the evidence. The server scans again. It rejects
+      a submission that still contains a secret.
     </p>
 
-    <h2>Your system identity</h2>
+    <h2>Your system name</h2>
     <p>
-      The runner generates a random Ed25519 keypair the first time it runs and stores it in
-      <code>~/.localmax/identity.json</code>. The public key acts as a pseudonymous
-      <em>system</em> identifier, so your machine can accumulate a result history across
-      driver updates and benchmark versions.
+      The runner makes a random Ed25519 key pair on first use. It keeps the key in
+      <code>~/.localmax/identity.json</code>. LocalMax makes a public name from that key, for
+      example <code>Rocinante-K7X2P</code>. You do not type a name. Your results collect
+      under one name across driver updates and benchmark versions.
     </p>
     <p>
-      It is derived from randomness, not from your hardware. Delete that file and you are a
-      new, unlinkable system. It is never correlated with an IP address. A display alias and
-      system name are optional free text that you type in yourself.
+      The key is random. It does not come from your hardware. Delete that file and your
+      machine becomes a new, unlinked system. LocalMax never connects it to an IP address.
+      There is no free-text name field.
     </p>
 
     <h2>Before anything is uploaded</h2>
     <p>
-      <code>localmax inspect</code> prints the exact manifest and the full artifact list with
-      no network access at all. <code>localmax submit</code> shows the same list and requires
-      confirmation. Nothing is transmitted before you accept it.
+      Command <code>localmax inspect</code> shows the manifest and each file. It needs no
+      network. Command <code>localmax submit</code> shows the same list and asks you to
+      confirm. Nothing goes to LocalMax before you accept it.
     </p>
 
     <h2>Retention</h2>
@@ -63,17 +63,18 @@ import Layout from "../components/Layout.astro";
 
     <h2>Removal</h2>
     <p>
-      Email <a href="mailto:privacy@localmax.net">privacy@localmax.net</a> with the run ID and
-      the signature produced by <code>localmax prove RUN_ID</code>, which demonstrates control
-      of the submitting key. The result and its evidence are removed. Git history is rewritten
-      only for exposed secrets or personal data.
+      Run <code>localmax prove RUN_ID</code>. It makes a signature that proves control of the
+      key. Send the run ID and the signature to
+      <a href="mailto:privacy@localmax.net">privacy@localmax.net</a>. LocalMax removes the
+      result and its evidence. LocalMax rewrites Git history only for exposed secrets or
+      personal data.
     </p>
 
     <h2>This website</h2>
     <p>
-      No cookies except a theme preference stored locally in your browser. No third-party
-      scripts, no fonts loaded from a CDN, no analytics. The verification page loads Cloudflare
-      Turnstile, and only that page.
+      The site sets no cookies. It keeps your theme choice in your browser. It loads no
+      third-party scripts, no fonts from a CDN and no analytics. Only the verification page
+      loads Cloudflare Turnstile.
     </p>
   </section>
 </Layout>

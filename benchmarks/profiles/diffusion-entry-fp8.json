@@ -176,9 +176,9 @@
     }
   },
   "notes": [
-    "Release candidate. The runtime and harness versions are pinned; the model revision is not frozen until the bake-off confirms fit on the tier's minimum-VRAM reference system, so this leaderboard is provisional.",
-    "Ranked on seconds per denoising step: it is resolution- and step-count-normalised, so it stays comparable if a future profile changes step count. Images per minute is derived from it and is the headline shown to readers.",
-    "Diffusion is compute-bound where the LLM profiles are bandwidth-bound. This is deliberate: it is the counterweight that stops the site being one memory-bandwidth chart in three costumes.",
-    "CPU offload is disabled and gated. A run that offloads is published but never ranked, because it measures the host as much as the GPU."
+    "This profile is a release candidate. The runtime is pinned. The model revision is not final. This leaderboard is provisional.",
+    "Ranked on seconds for each step. That value does not change if the resolution or the step count changes. Images for each minute comes from it.",
+    "Diffusion is compute-bound. The LLM profiles are bandwidth-bound. This is deliberate.",
+    "CPU offload is off, and a gate enforces it. A run that offloads measures the host as well as the GPU. LocalMax publishes it but does not rank it."
   ]
 }

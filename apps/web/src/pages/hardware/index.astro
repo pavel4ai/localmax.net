@@ -13,9 +13,9 @@ const unregistered = data?.unregistered ?? [];
 
 const classes = ["entry", "enthusiast", "frontier"] as const;
 const CLASS_NOTE: Record<string, string> = {
-  entry: "12–17 GB. Runs the Entry tier.",
-  enthusiast: "24–48 GB. Runs Entry and Enthusiast.",
-  frontier: "64 GB and up, including unified memory. Runs all three tiers.",
+  entry: "12 GB to 17 GB. Runs the Entry tier.",
+  enthusiast: "24 GB to 48 GB. Runs Entry and Enthusiast.",
+  frontier: "64 GB and more, including unified memory. Runs all three tiers.",
 };
 ---
 
@@ -24,8 +24,8 @@ const CLASS_NOTE: Record<string, string> = {
     <div class="eyebrow">Hardware</div>
     <h1 style="margin:12px 0 14px;font-size:2.1rem">Supported GPUs</h1>
     <p class="lede">
-      Tier eligibility is computed from total VRAM across a system, not from a single card,
-      so two RTX PRO 6000s reach Frontier the same way a DGX Spark does.
+      LocalMax computes the tier from the total VRAM in a system, not from one card. Two
+      RTX PRO 6000 cards reach Frontier, and so does a DGX Spark.
     </p>
   </section>
 
@@ -80,9 +80,9 @@ const CLASS_NOTE: Record<string, string> = {
         <h2>Seen but not yet in the registry</h2>
       </div>
       <p class="lede">
-        These GPUs appear in submitted results but have no verified specification on file, so
-        they are excluded from any bandwidth-normalised view until someone adds them with a
-        manufacturer citation.
+        These GPUs appear in results, but LocalMax has no verified specification for them.
+        They stay out of any view that uses bandwidth until someone adds a specification with
+        a manufacturer source.
       </p>
       <div class="table-scroll" style="margin-top:16px">
         <table>
@@ -101,16 +101,14 @@ const CLASS_NOTE: Record<string, string> = {
     <div class="panel" style="max-width:var(--measure)">
       <h3>A note on DGX Spark</h3>
       <p style="margin-top:10px">
-        GB10 is an aarch64 system with 128 GB of LPDDR5X shared between CPU and GPU. It has
-        enormous capacity and modest bandwidth, which is exactly the profile the tier system
-        exists to represent: expect it to hold models nothing else here can, and to trail
-        discrete cards on decode throughput.
+        GB10 is an aarch64 system. Its 128 GB of LPDDR5X is shared between the CPU and the
+        GPU. It has large capacity and moderate bandwidth. It holds models that no other
+        system here can hold. It is slower than a discrete card on decode.
       </p>
       <p style="margin-bottom:0">
-        Its power telemetry is measured at the SoC module, not a GPU board. Those are
-        different physical quantities, so a Spark result is never ranked for energy against a
-        discrete card — the wattage is shown, clearly labelled, and left out of the
-        efficiency view.
+        Its power is measured at the SoC module, not at a GPU board. These are different
+        quantities. LocalMax shows the wattage with a label, but it does not rank a Spark for
+        energy against a discrete card.
       </p>
     </div>
   </section>

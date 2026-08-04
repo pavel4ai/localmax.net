@@ -60,7 +60,7 @@ const totalResults = rows.reduce((s, p) => s + p.samples, 0);
         {g.architecture} · {bytes(g.vram_bytes)} {g.memory_type === "unified" ? "unified memory" : "VRAM"}
         {g.memory_bandwidth_gb_s ? ` · ${num(g.memory_bandwidth_gb_s, 0)} GB/s` : ""}
         {g.default_power_limit_w ? ` · ${g.default_power_limit_w} W` : ""}
-        {" · lanes: BF16, INT4"}{g.supports_nvfp4 ? ", NVFP4" : ""}
+        {` · lanes: ${[g.supports_fp8 ? "FP8" : null, "INT4", g.supports_nvfp4 ? "NVFP4" : null].filter(Boolean).join(", ")}`}
       </p>
     )}
 
@@ -139,9 +139,9 @@ const totalResults = rows.reduce((s, p) => s + p.samples, 0);
       ))}
 
       <p class="muted" style="font-size:12.5px;margin-top:16px;max-width:var(--measure)">
-        These rows measure different things — tokens per second, seconds per diffusion step,
-        images per minute — so they are not drawn on a shared axis. Bar length would encode
-        nothing. Follow a profile link to see this GPU ranked against comparable results.
+        These rows measure different things: tokens for each second, seconds for each step,
+        images for each minute. They do not share an axis. Open a profile to see this GPU
+        against comparable results.
       </p>
     </section>
   )}

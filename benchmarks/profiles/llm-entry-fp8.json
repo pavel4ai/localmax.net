@@ -237,9 +237,9 @@
     }
   },
   "notes": [
-    "Release candidate. The runtime and harness versions are pinned; the model revision is not frozen until the bake-off confirms fit on the tier's minimum-VRAM reference system, so this leaderboard is provisional.",
-    "gpu-memory-utilization is 0.9 rather than the usual 0.95 because a 12 GB card frequently drives a display. If the bake-off shows 0.9 still fails with a desktop session attached, max-model-len drops before the utilisation does.",
-    "Decode and prefill throughput are reported separately. Decode tracks memory bandwidth; prefill tracks compute. Reporting only TTFT would hide the difference between a DGX Spark and an RTX 4090.",
-    "Only single-GPU results are accepted at Entry tier. A multi-GPU system may run this profile, but the runner pins it to one device."
+    "This profile is a release candidate. The runtime is pinned. The model revision is not final. This leaderboard is provisional.",
+    "The value for gpu-memory-utilization is 0.9, not 0.95. A 12 GB card often drives a display.",
+    "Decode and prefill are separate values. Decode follows memory bandwidth. Prefill follows compute.",
+    "The Entry tier accepts single-GPU results only. On a multi-GPU system the runner uses one device."
   ]
 }

@@ -2,24 +2,23 @@
 import Layout from "../components/Layout.astro";
 
 const sections = [
-  { id: "comparability", label: "What makes two results comparable" },
-  { id: "tiers", label: "Why three tiers" },
-  { id: "lanes", label: "Why three quantization lanes" },
-  { id: "metrics", label: "What is measured" },
-  { id: "power", label: "Power is typed, not just measured" },
-  { id: "verification", label: "Verification states" },
-  { id: "validation", label: "How a result is validated" },
+  { id: "comparable", label: "What compares" },
+  { id: "tiers", label: "Three tiers" },
+  { id: "lanes", label: "Three lanes" },
+  { id: "measured", label: "What LocalMax measures" },
+  { id: "power", label: "Power has a type" },
+  { id: "states", label: "Verification states" },
+  { id: "checks", label: "How LocalMax checks a result" },
   { id: "limits", label: "What this cannot tell you" },
 ];
 ---
 
-<Layout title="Methodology" description="How LocalMax defines comparability, what it measures, and what it deliberately refuses to claim.">
+<Layout title="Methodology" description="How LocalMax defines a comparison, what it measures, and what it does not claim.">
   <section class="wrap" style="padding:48px 0 0">
     <div class="eyebrow">Methodology</div>
     <h1 style="margin:12px 0 16px;font-size:2.1rem">How this works</h1>
     <p class="lede">
-      A benchmark is only as good as the things it refuses to let vary. This page is the
-      complete list of what LocalMax fixes, what it measures, and what it will not claim.
+      A benchmark is only as good as the things it holds fixed. This page lists all of them.
     </p>
     <nav class="toc" aria-label="On this page">
       {sections.map((s) => <a href={`#${s.id}`}>{s.label}</a>)}
@@ -27,150 +26,135 @@ const sections = [
   </section>
 
   <article class="wrap prose">
-    <h2 id="comparability">What makes two results comparable</h2>
+    <h2 id="comparable">What compares</h2>
+    <p>Two results share a rank only if all of these keys agree:</p>
+    <pre class="cmd">category · tier · lane · profile version · runtime · runtime version · GPU count · parallelism</pre>
     <p>
-      Results share a rank only when every one of these keys matches. Nothing else is ranked
-      together, no matter how similar it looks.
-    </p>
-    <pre class="cmd">category · tier · lane · profile_version · runtime · runtime_version · gpu_count · parallelism</pre>
-    <p>
-      The profile file that defines those rules is hashed, and its hash travels inside every
-      manifest. If a profile were ever edited after release, results produced before and
-      after would carry different hashes and would stop sharing a leaderboard automatically.
-      Released profiles are immutable; a change publishes a new version instead.
+      LocalMax computes a hash of the profile file. The hash goes into each manifest. If
+      someone edits a profile after release, the hash changes. Old and new results then stop
+      sharing a leaderboard. A released profile does not change. A change makes a new version.
     </p>
 
-    <h2 id="tiers">Why three tiers</h2>
+    <h2 id="tiers">Three tiers</h2>
     <p>
-      LocalMax targets everything from a 12 GB RTX 3060 to a dual RTX PRO 6000 workstation at
-      192 GB and a DGX Spark at 128 GB of unified memory. That is a sixteenfold range in
-      capacity and roughly sixfold in memory bandwidth.
+      LocalMax supports 12 GB cards and 192 GB workstations. That is 16 times the capacity
+      and 6 times the memory bandwidth.
     </p>
     <p>
-      A single small model across that range measures almost nothing but memory bandwidth.
-      The second RTX PRO 6000 would sit idle, and DGX Spark — whose entire value is capacity —
-      would rank below an RTX 3060. So a tier is defined by the VRAM its ranked run is meant
-      to <em>fill</em>: 12 GB, 24 GB, 64 GB. Each has its own fixed model.
+      One small model across that range measures memory bandwidth and little else. The
+      second card in a dual workstation stays idle. A DGX Spark ranks below an RTX 3060.
     </p>
     <p>
-      The Frontier baseline is a 32B at BF16, roughly 64 GB. That is deliberate: it fits both
-      a 128 GB Spark and a 2×96 GB workstation. A 70B BF16 baseline would have excluded Spark
-      from the tier that exists to describe it.
+      So a tier is the VRAM that its run must fill: 12 GB, 24 GB, 64 GB. Each tier has its
+      own model.
+    </p>
+    <p>
+      The Frontier model is a 32B. At FP8 it is about 35 GB. It fits a DGX Spark and a dual
+      RTX PRO 6000 workstation. A 70B model would exclude the Spark from the tier that exists
+      to describe it.
     </p>
 
-    <h2 id="lanes">Why three quantization lanes</h2>
-    <p>
-      Precision support is not uniform across the hardware here. Ampere has no FP8 unit at
-      all; FP4 is Blackwell only. Pinning one precision would either exclude the RTX 3090 —
-      still one of the most common cards in local AI — or make Blackwell's headline advantage
-      invisible.
-    </p>
+    <h2 id="lanes">Three lanes</h2>
+    <p>Hardware support for a precision is not the same on all cards.</p>
     <ul>
-      <li><strong>BF16</strong> runs everywhere. This is the fair cross-generation baseline and the lane that spans the most hardware.</li>
-      <li><strong>INT4 (AWQ)</strong> runs on Ampere and up, and fits a larger model in the same VRAM. It is what most people actually run locally.</li>
-      <li><strong>NVFP4</strong> is Blackwell only: RTX 5090, RTX PRO 6000, DGX Spark.</li>
+      <li><strong>FP8</strong> needs Ada or newer. This is the default lane.</li>
+      <li><strong>INT4</strong> needs Ampere or newer. This lane has the widest hardware support. An RTX 3090 can appear only here.</li>
+      <li><strong>NVFP4</strong> needs Blackwell.</li>
     </ul>
     <p>
-      Each lane is its own leaderboard. Ranking them together would compare different
-      numerical workloads and quietly reward whoever picked the loosest precision. A fourth
-      FP8 lane is reserved in the schema but ships no profile in v1.
+      LocalMax ranks each lane on its own. A single table across lanes would compare
+      different work, and would reward the loosest precision.
     </p>
 
-    <h2 id="metrics">What is measured</h2>
+    <h2 id="measured">What LocalMax measures</h2>
     <p>
-      <strong>Decode and prefill throughput are reported separately.</strong> This is the
-      single most informative split on the site. Decode tracks memory bandwidth; prefill
-      tracks compute. Reporting only time-to-first-token would conflate prefill with
-      scheduling overhead and hide the real difference between a bandwidth-rich RTX 5090 and
-      a capacity-rich DGX Spark.
+      <strong>Decode and prefill are separate numbers.</strong> Decode follows memory
+      bandwidth. Prefill follows compute. Time to first token mixes prefill with scheduling,
+      so it hides the difference between a fast RTX 5090 and a large DGX Spark.
     </p>
     <p>
-      LLM profiles are ranked on decode throughput, behind gates on TTFT p95 and inter-token
-      latency p95: a system that cannot answer interactively is published but not ranked.
-      Vision is ranked on images per minute, behind a deterministic answer-accuracy gate —
-      a fast but wrong system does not get a rank. Diffusion is ranked on seconds per
-      denoising step, which is resolution- and step-count-normalised; images per minute is
-      derived from it and is what the headline shows.
+      LocalMax ranks an LLM profile on decode throughput. Two gates apply: time to first
+      token at p95, and inter-token latency at p95. A system that cannot answer at
+      interactive speed is published, but it is not ranked.
     </p>
     <p>
-      Diffusion is compute-bound where the LLM profiles are bandwidth-bound. That is on
-      purpose. Without it, three categories would produce one memory-bandwidth chart in three
-      costumes.
-    </p>
-
-    <h2 id="power">Power is typed, not just measured</h2>
-    <p>
-      A discrete card reports board power. A GB10 reports power at the SoC module, where CPU,
-      GPU and LPDDR share a rail. These are different physical quantities, and averaging them
-      into one efficiency score would be meaningless.
+      LocalMax ranks a vision profile on images for each minute. An answer-accuracy gate
+      applies first. A fast but incorrect system does not get a rank.
     </p>
     <p>
-      So every result carries a power domain — <code>gpu_board</code>,
-      <code>soc_module</code>, or <code>unavailable</code> — and results are never ranked for
-      energy across domains. Unified-memory wattage is shown, labelled, and excluded from the
-      efficiency view.
+      LocalMax ranks a diffusion profile on seconds for each denoising step. That value does
+      not change if the resolution or the step count changes. Images for each minute comes
+      from it, and is the number that a reader sees.
+    </p>
+    <p>
+      Diffusion is compute-bound. The LLM profiles are bandwidth-bound. This is deliberate.
+      Without it, three categories give one memory-bandwidth chart three times.
     </p>
 
-    <h2 id="verification">Verification states</h2>
+    <h2 id="power">Power has a type</h2>
+    <p>
+      A discrete card reports board power. A GB10 reports power at the SoC module, where the
+      CPU, the GPU and the memory share one rail. These are different quantities.
+    </p>
+    <p>
+      Each result carries a power domain: <code>gpu_board</code>, <code>soc_module</code> or
+      <code>unavailable</code>. LocalMax does not rank energy across domains. It shows the
+      wattage of a unified-memory system, but it gives that system no efficiency value.
+    </p>
+
+    <h2 id="states">Verification states</h2>
     <dl class="states">
       <dt>Verified</dt>
       <dd>
-        Official signed container digest, frozen profile whose hash matches, every required
-        artifact present, telemetry covering at least 99% of the measured run, and every
-        derived metric recomputed from the raw records within tolerance. Ranked.
+        The container digest is a signed release. The profile hash agrees. All required
+        evidence is present. Telemetry covers at least 99% of the run. LocalMax computed each
+        derived value again from the raw records, and the values agree. Ranked.
       </dd>
       <dt>Community</dt>
       <dd>
-        Valid manifest and signature, but incomplete evidence or an unofficial image. Every
-        raw value is published; the result is never ranked.
+        The manifest and the signature are valid, but the evidence is incomplete or the image
+        is not an official release. All raw values are published. Not ranked.
       </dd>
       <dt>Flagged</dt>
       <dd>
-        A value sits outside the plausible range for the hardware. Held for human review.
-        Nothing is altered — a suspicious number stays exactly as submitted, with the finding
-        attached.
+        A value is outside the expected range for that hardware. Held for review. LocalMax
+        changes nothing. The value stays as submitted, with the finding attached.
       </dd>
     </dl>
-    <p>
-      Certified — an independent operator repeating the run — is deferred until the protocol
-      has settled.
-    </p>
 
-    <h2 id="validation">How a result is validated</h2>
+    <h2 id="checks">How LocalMax checks a result</h2>
     <ol>
-      <li>Schema validation of the full manifest against a published JSON Schema.</li>
-      <li>Ed25519 signature check over the RFC 8785 canonical form of the manifest.</li>
-      <li>Profile hash comparison against the published profile bytes.</li>
-      <li>Runtime flags compared against the pinned set, flag by flag.</li>
-      <li>Hardware eligibility: total VRAM against the tier, architecture against the lane, GPU count against the profile.</li>
-      <li>Evidence retrieval: every artifact must exist in the store at the exact declared size, having been verified against its SHA-256 during upload.</li>
-      <li>Secret scan over text evidence. A hit rejects the submission and purges the objects.</li>
-      <li><strong>Metric recomputation.</strong> Percentiles, throughput, error rates and accuracy are recalculated from the raw per-request records and compared to the declared values within tolerance.</li>
-      <li>Plausibility bounds per profile. A violation flags for review; it never rewrites a value.</li>
-      <li>Ranking gates, then duplicate detection against the submitting system's history.</li>
+      <li>Validate the manifest against the published schema.</li>
+      <li>Verify the Ed25519 signature over the canonical manifest.</li>
+      <li>Compare the profile hash with the published profile.</li>
+      <li>Compare each runtime flag with the pinned set.</li>
+      <li>Check the hardware: total VRAM against the tier, architecture against the lane, GPU count against the profile.</li>
+      <li>Read back each evidence file. R2 verified its SHA-256 during upload.</li>
+      <li>Scan text evidence for secrets. A match rejects the submission and deletes the files.</li>
+      <li><strong>Compute each metric again from the raw records.</strong> Percentiles, throughput, error rates and accuracy must agree within tolerance.</li>
+      <li>Apply the plausibility bounds. A violation flags the result. It never changes a value.</li>
+      <li>Apply the ranking gates. Then look for a duplicate from the same system.</li>
     </ol>
     <p>
-      This runs asynchronously on a queue rather than inline, which is why submission returns
-      immediately even under load.
+      This work runs on a queue, not during the request. That is why a submission returns at
+      once, even under load.
     </p>
 
     <h2 id="limits">What this cannot tell you</h2>
     <p>
-      A signature proves a bundle came from one runner installation and has not been modified.
-      It does not prove the reported hardware is real, and it does not prove the operator was
-      honest. Verified describes protocol compliance and evidence consistency — it is not an
-      audit.
+      A signature proves that one runner made the bundle, and that nobody changed it after.
+      It does not prove that the hardware is real. It does not prove that the operator was
+      honest. Verified describes the evidence, not the truth of a number.
     </p>
     <p>
-      What actually protects the data is that a fabricated number would also require a
-      self-consistent set of raw per-request records, a telemetry trace, and a value that sits
-      plausibly within the distribution for that GPU. All of which is public, so anyone can
-      check.
+      What protects the data is the cost of a lie. A false number also needs raw records that
+      agree with it, a telemetry trace, and a value that fits the distribution for that GPU.
+      All of it is public. Anyone can check it.
     </p>
     <p>
-      Finally: these are inference performance measurements under one fixed workload. They say
-      nothing about model quality, nothing about how a model behaves on your prompts, and
-      nothing about performance under a workload shaped differently from ours.
+      These are inference measurements under one fixed workload. They say nothing about model
+      quality. They say nothing about your prompts. They say nothing about a workload with a
+      different shape.
     </p>
   </article>
 </Layout>
@@ -188,15 +172,15 @@ const sections = [
   .toc a { color: var(--text-muted); }
   .toc a:hover { color: var(--text-primary); }
 
-  .prose { padding: 20px 0 0; max-width: 780px; }
+  .prose { padding: 20px 0 0; max-width: 760px; }
   .prose h2 {
-    margin: 52px 0 14px;
+    margin: 48px 0 14px;
     padding-top: 24px;
     border-top: 1px solid var(--border);
     scroll-margin-top: 72px;
   }
   .prose p, .prose li { color: var(--text-secondary); }
-  .prose ul, .prose ol { padding-left: 20px; display: grid; gap: 10px; margin: 0 0 16px; }
+  .prose ul, .prose ol { padding-left: 20px; display: grid; gap: 9px; margin: 0 0 16px; }
   .prose code { background: var(--surface-2); padding: 1px 5px; border-radius: 3px; }
   .prose pre.cmd { margin: 0 0 16px; white-space: pre-wrap; word-break: break-word; }
   .states { display: grid; gap: 4px; margin: 0 0 16px; }

@@ -15,12 +15,12 @@ const LABEL: Record<string, string> = {
 
 const TITLE: Record<string, string> = {
   verified:
-    "Official signed image, frozen profile, complete evidence, telemetry coverage met, and every derived metric recomputed from the raw records.",
+    "Signed image. Profile hash agrees. Evidence complete. LocalMax computed each value again from the raw records.",
   community:
-    "Valid manifest and signature, but the evidence is incomplete or the image is not an official release. Published in full; never ranked.",
+    "Manifest and signature are valid, but the evidence is incomplete or the image is not an official release. Published, not ranked.",
   flagged:
-    "At least one value falls outside the expected range for this hardware. Held for review; nothing about the submission has been altered.",
-  rejected: "Failed validation. Not published.",
+    "A value is outside the expected range for this hardware. Held for review. LocalMax changed nothing.",
+  rejected: "Failed a check. Not published.",
 };
 
 const isRanked = ranked === 1 || ranked === true;
@@ -33,7 +33,7 @@ const showUnranked = !compact && verification !== "rejected" && !isRanked;
 {showUnranked && (
   <span
     class="badge badge-unranked"
-    title="Published with every raw value intact, but excluded from the rank because a profile gate was not met."
+    title="Published with all raw values, but not ranked: a profile gate did not pass."
   >
     <span class="dot" aria-hidden="true"></span>Unranked
   </span>

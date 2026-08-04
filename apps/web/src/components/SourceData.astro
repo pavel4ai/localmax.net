@@ -11,7 +11,7 @@ interface Props {
   summary?: string;
 }
 
-const { columns, rows, filename = "localmax-chart-data.csv", summary = "Show the values behind this chart" } = Astro.props;
+const { columns, rows, filename = "localmax-chart-data.csv", summary = "Show the values in this chart" } = Astro.props;
 
 const escape = (v: string | number | null) => {
   const s = v === null || v === undefined ? "" : String(v);
@@ -36,7 +36,7 @@ const href = `data:text/csv;charset=utf-8,${encodeURIComponent(csv)}`;
     </table>
   </div>
   <p style="margin-top:10px">
-    <a href={href} download={filename} class="secondary">Download these values as CSV</a>
+    <a href={href} download={filename} class="secondary">Download as CSV</a>
     · <a href="/data" class="secondary">Full open dataset</a>
   </p>
 </details>

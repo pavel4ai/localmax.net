@@ -237,8 +237,8 @@
     }
   },
   "notes": [
-    "Release candidate. The runtime and harness versions are pinned; the model revision is not frozen until the bake-off confirms fit on the tier's minimum-VRAM reference system, so this leaderboard is provisional.",
-    "Decode and prefill throughput are reported separately: decode tracks memory bandwidth, prefill tracks compute.",
+    "This profile is a release candidate. The runtime is pinned. The model revision is not final. This leaderboard is provisional.",
+    "Decode and prefill are separate values. Decode follows memory bandwidth. Prefill follows compute.",
     "BF16 lane. Ranked only against other BF16 results, because comparing precisions would compare different numerical workloads."
   ]
 }

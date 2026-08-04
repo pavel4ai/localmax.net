@@ -12,9 +12,9 @@ const profiles = data?.profiles ?? [];
     <div class="eyebrow">Releases</div>
     <h1 style="margin:12px 0 16px;font-size:2.1rem">Versions and compatibility</h1>
     <p class="lede">
-      A released profile is immutable. Changing the model, revision, precision, runtime,
-      flags, prompt set, token shape, assets, step count, seeds or metric definitions is a
-      major version bump that creates a separate leaderboard.
+      A released profile does not change. A change to the model, revision, precision,
+      runtime, flags, prompts, token counts, assets, step count, seeds or metric definitions
+      is a major version. A major version makes a separate leaderboard.
     </p>
   </section>
 
@@ -54,23 +54,23 @@ const profiles = data?.profiles ?? [];
       <div class="tile">
         <div class="tile-label">Major</div>
         <div class="body">
-          Anything that changes a measured number: model, revision, precision, runtime,
-          runtime flags, workload shape, assets, seeds, metric definitions or ranking gates.
-          A new leaderboard; old results keep theirs.
+          Anything that changes a measured number. Model, revision, precision, runtime,
+          flags, workload, assets, seeds, metric definitions or gates. This makes a new
+          leaderboard. Old results keep their own.
         </div>
       </div>
       <div class="tile">
         <div class="tile-label">Minor</div>
         <div class="body">
-          A new optional workload, or a new secondary metric that does not affect the rank.
-          Existing results stay comparable and simply lack the new column.
+          A new optional workload, or a new secondary value that does not change the rank.
+          Existing results still compare. They have no value in the new column.
         </div>
       </div>
       <div class="tile">
         <div class="tile-label">Patch</div>
         <div class="body">
-          Display names, summaries, comments and documentation. Nothing that could move a
-          value. Results are unaffected.
+          Display names, summaries and documentation. Nothing that can move a value.
+          Results do not change.
         </div>
       </div>
     </div>
@@ -78,16 +78,14 @@ const profiles = data?.profiles ?? [];
     <div class="panel" style="margin-top:26px;max-width:var(--measure)">
       <h3>Release candidates</h3>
       <p style="margin-top:10px">
-        Profiles at version <code>0.x</code> are not frozen. Their model revision, runtime
-        version and harness commit are still being pinned against the tier's minimum-VRAM
-        reference system, and their leaderboards are provisional. Results collected against
-        a <code>0.x</code> profile are ranked only against that same version, and are not
-        migrated when it freezes.
+        A profile at version <code>0.x</code> is not frozen. Its model revision is not
+        final. Its leaderboard is provisional. LocalMax ranks a result only against its own
+        profile version. It does not move a result when a profile freezes.
       </p>
       <p style="margin-bottom:0">
-        Freezing a profile requires conformance data from at least two GPU classes including
-        the tier minimum, a repeatability coefficient of variation at or under 3%, and a
-        completed licence review of every model and asset it references.
+        Before a profile freezes, it needs three things. Conformance data from two GPU
+        classes, including the smallest card for the tier. A repeatability variation of 3% or
+        less. A completed licence review of each model and asset.
       </p>
     </div>
   </section>
@@ -95,10 +93,9 @@ const profiles = data?.profiles ?? [];
   <section class="section wrap">
     <h2>Container images</h2>
     <p style="margin-top:10px">
-      Every released image is multi-architecture (<code>linux/amd64</code> and
-      <code>linux/arm64</code>), signed with Cosign, and published with an SBOM and build
-      provenance. A result reaches Verified only if its recorded image digest matches a
-      released one.
+      LocalMax signs each released image with Cosign. Each image has an SBOM and build
+      provenance. A result reaches Verified only if its image digest matches a released
+      digest.
     </p>
     <pre class="cmd">ghcr.io/pavel4ai/localmax-llm
 ghcr.io/pavel4ai/localmax-vision

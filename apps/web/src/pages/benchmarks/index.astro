@@ -14,9 +14,9 @@ const find = (c: string, t: string, l: string) =>
   profiles.find((p) => p.category === c && p.tier === t && p.lane === l);
 
 const LANE_NOTE: Record<string, string> = {
-  base: "BF16. Runs on every supported GPU — the fair cross-generation baseline.",
-  int4: "AWQ INT4. Ampere and up. A larger model in the same VRAM.",
-  nvfp4: "NVFP4. Blackwell only: RTX 5090, RTX PRO 6000, DGX Spark.",
+  fp8: "Needs Ada or newer. The default lane.",
+  int4: "Needs Ampere or newer. The widest hardware support.",
+  nvfp4: "Needs Blackwell. RTX 5090, RTX PRO 6000, DGX Spark.",
 };
 ---
 
@@ -25,9 +25,9 @@ const LANE_NOTE: Record<string, string> = {
     <div class="eyebrow">Benchmarks</div>
     <h1 style="margin:12px 0 18px;font-size:2.2rem">The profile matrix</h1>
     <p class="lede">
-      A profile is the unit of comparability. Two results share a rank only when the
-      category, tier, lane, profile version, runtime, GPU count and parallelism all match.
-      Everything else is shown side by side but never ranked together.
+      A profile is the unit of comparison. Two results share a rank only if the category,
+      tier, lane, profile version, runtime, GPU count and parallelism all agree. LocalMax
+      shows other results together, but it does not rank them together.
     </p>
   </section>
 
@@ -36,9 +36,9 @@ const LANE_NOTE: Record<string, string> = {
       <div class="section-head">
         <h2>{CATEGORY_LABEL[category]}</h2>
         <span class="muted" style="font-size:13px">
-          {category === "llm" && "Ranked on decode throughput under TTFT and inter-token latency gates."}
-          {category === "vision" && "Ranked on images per minute, behind a deterministic answer-accuracy gate."}
-          {category === "diffusion" && "Ranked on seconds per denoising step. Images per minute is derived from it."}
+          {category === "llm" && "Ranked on decode throughput. Latency gates apply."}
+          {category === "vision" && "Ranked on images for each minute. An accuracy gate applies."}
+          {category === "diffusion" && "Ranked on seconds for each step."}
         </span>
       </div>
 
@@ -88,15 +88,12 @@ const LANE_NOTE: Record<string, string> = {
     <div class="panel" style="max-width:var(--measure)">
       <h3>Why a leaderboard can stay hidden</h3>
       <p style="margin-top:10px">
-        A profile is runnable as soon as it exists, but its leaderboard only appears once two
-        independent systems have verified results on it. A table with one row is not a
-        comparison, and publishing it would imply a ranking that the data cannot support.
+        You can run a profile as soon as it exists. Its leaderboard appears only after two
+        different systems have verified results. One row is not a comparison.
       </p>
       <p style="margin-bottom:0">
-        Profiles at version <code>0.x</code> are release candidates: the model revision,
-        runtime version and harness commit are still being pinned against the tier's
-        minimum-VRAM reference system. Results collected against a <code>0.x</code> profile
-        are ranked only against that same version.
+        A profile at version <code>0.x</code> is not frozen. Its model revision is not
+        final. LocalMax ranks a result only against its own profile version.
       </p>
     </div>
   </section>

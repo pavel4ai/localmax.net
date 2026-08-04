@@ -235,9 +235,9 @@
     }
   },
   "notes": [
-    "Release candidate. The runtime and harness versions are pinned; the model revision is not frozen until the bake-off confirms fit on the tier's minimum-VRAM reference system, so this leaderboard is provisional.",
-    "A 32B at BF16 is roughly 64 GB, which fits both a DGX Spark and a 2x96 GB workstation. A 70B BF16 baseline was rejected because it would exclude DGX Spark from its own tier.",
-    "Both 1 and 2 GPU results are accepted, ranked separately. Tensor parallelism is recorded as a comparability key.",
-    "RTX PRO 6000 Blackwell has no NVLink, so a 2-GPU result there communicates over PCIe. PCIe generation and width are recorded and shown on the result page."
+    "This profile is a release candidate. The runtime is pinned. The model revision is not final. This leaderboard is provisional.",
+    "A 32B model at FP8 fits a DGX Spark and a dual RTX PRO 6000 workstation. A 70B model would exclude the Spark from its own tier.",
+    "This profile accepts 1 or 2 GPUs. LocalMax ranks each count separately.",
+    "The RTX PRO 6000 Blackwell has no NVLink. A 2-GPU result uses PCIe. The result page shows the PCIe generation and width."
   ]
 }

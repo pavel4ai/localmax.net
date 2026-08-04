@@ -92,9 +92,8 @@ const visible = ROWS.filter(
     <div class="eyebrow">Compare</div>
     <h1 style="margin:12px 0 14px;font-size:2.1rem">Side by side</h1>
     <p class="lede">
-      Paste between two and four run IDs, or reach this page from any result. The comparison
-      is honest about what is comparable: results from different profiles are shown, but
-      flagged rather than quietly lined up.
+      Enter two to four run IDs, or come here from a result. LocalMax shows results from
+      different profiles, but it marks them. It does not put them in one rank.
     </p>
 
     <form method="get" class="picker">
@@ -114,7 +113,7 @@ const visible = ROWS.filter(
   {ids.length < 2 && (
     <section class="wrap" style="padding-top:26px">
       <div class="empty">
-        Add at least two run IDs. Every result page has a Compare button that starts one for you.
+        Add two run IDs or more. Each result page has a Compare button.
       </div>
     </section>
   )}
@@ -165,8 +164,8 @@ const visible = ROWS.filter(
         </table>
       </div>
       <p class="muted" style="font-size:12.5px;margin-top:14px;max-width:var(--measure)">
-        A highlighted cell is the best value in that row among these results only. It is not a
-        rank, and a row is never highlighted when any of the systems did not report it.
+        A marked cell is the best value in that row, among these results only. It is not a
+        rank. LocalMax marks no cell if a system did not report that value.
       </p>
     </section>
   )}
