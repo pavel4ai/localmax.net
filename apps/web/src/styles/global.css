@@ -342,6 +342,22 @@ figcaption {
 }
 
 .chart { display: block; width: 100%; height: auto; overflow: visible; }
+
+/*
+ * A chart scaled to a phone shrinks its own labels to a few pixels. Give it a floor and let
+ * the container scroll: an unreadable chart is worse than one that needs a swipe.
+ */
+.chart-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.chart-scroll > .chart { min-width: 640px; }
+@media (max-width: 700px) {
+  .chart-scroll::after {
+    content: "Scroll to see the full chart";
+    display: block;
+    font-size: 11px;
+    color: var(--text-muted);
+    padding-top: 6px;
+  }
+}
 .chart text { font-family: var(--font-sans); fill: var(--text-muted); font-size: 11px; }
 .chart .axis-label { fill: var(--text-muted); font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; }
 .chart .value-label { fill: var(--text-secondary); font-size: 11px; font-variant-numeric: tabular-nums; }

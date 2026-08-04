@@ -1,0 +1,154 @@
+---
+import Layout from "../components/Layout.astro";
+---
+
+<Layout title="Legal" description="Terms for use of LocalMax and for benchmark submissions.">
+  <section class="wrap prose">
+    <div class="eyebrow">Legal</div>
+    <h1>Legal</h1>
+    <p class="lede">
+      Read this before you run LocalMax or submit a result. Use of the software and the
+      website means that you accept these terms.
+    </p>
+
+    <div class="callout">
+      <strong>Read the source first.</strong> LocalMax runs on your computer. It reads
+      hardware data and starts an inference server. All source code is public at
+      <a href="https://github.com/pavel4ai/localmax.net">github.com/pavel4ai/localmax.net</a>.
+      Examine it before you run it. Do not run software that you have not examined.
+    </div>
+
+    <h2>Submissions are voluntary</h2>
+    <p>
+      You are not required to submit a result. You start each run. You start each
+      submission. Command <code>localmax inspect</code> shows the full content of a
+      submission before upload. Nothing goes to LocalMax until you approve it.
+    </p>
+
+    <h2>You accept all risk</h2>
+    <p>
+      You use LocalMax at your own risk. A benchmark puts a large load on your hardware for a
+      long time. This can cause high temperatures, high power use, instability, data loss, or
+      damage to hardware.
+    </p>
+    <p>
+      You are responsible for your hardware, your cooling, your power supply and your data.
+      You are responsible for backups. Make sure that your system is safe to operate at full
+      load before you start a run.
+    </p>
+
+    <h2>You are responsible for permission</h2>
+    <p>
+      Submit results only from hardware that you own or that you have permission to
+      benchmark. Do not submit a result from a system under a confidentiality agreement or an
+      embargo. You are responsible for compliance with the licence of each model and each
+      data set that a benchmark uses.
+    </p>
+
+    <h2>Submitted data becomes public</h2>
+    <p>
+      An accepted result is public and permanent. LocalMax publishes it under the Creative
+      Commons Attribution 4.0 licence, and copies it into a public Git history. You give
+      LocalMax an irrevocable licence to publish the measured data, the system configuration
+      data and the evidence that you submit.
+    </p>
+    <p>
+      You can request removal. See <a href="/privacy">Privacy</a>. Removal from Git history
+      occurs only for exposed secrets or personal data.
+    </p>
+
+    <h2>No warranty</h2>
+    <p>
+      LocalMax is supplied "as is", without warranty of any kind, express or implied. This
+      includes, but is not limited to, warranties of merchantability, fitness for a purpose,
+      and non-infringement.
+    </p>
+    <p>
+      Results come from the public. A verification state describes the completeness and the
+      internal consistency of the evidence. It does not prove that a value is correct. It
+      does not prove that an operator was honest. Do not use this data as the only basis for
+      a purchase, an engineering decision or a publication.
+    </p>
+
+    <h2>Limitation of liability</h2>
+    <p>
+      To the maximum extent that the law permits, LocalMax, its owners, its maintainers, its
+      contributors and its agents are not liable for any damage. This includes direct,
+      indirect, incidental, special, consequential, exemplary and punitive damage. It
+      includes damage to hardware, loss of data, loss of profit, loss of use and business
+      interruption. This applies even if LocalMax knew that such damage was possible.
+    </p>
+
+    <h2>Indemnity</h2>
+    <p>
+      You agree to indemnify LocalMax, its owners, its maintainers, its contributors and its
+      agents, and to hold them harmless. This applies to all claims, damages, losses,
+      liabilities, costs and legal fees that result from:
+    </p>
+    <ul>
+      <li>your use of the software or the website;</li>
+      <li>a result that you submit;</li>
+      <li>your breach of these terms;</li>
+      <li>your breach of a law or of the rights of another party.</li>
+    </ul>
+
+    <h2>Removal of content</h2>
+    <p>
+      LocalMax can remove or annotate any result at any time, for any reason, and without
+      notice. Reasons include fraud, a breach of a third-party licence, exposure of personal
+      data, and a request from the contributor.
+    </p>
+
+    <h2>Trademarks</h2>
+    <p>
+      NVIDIA, GeForce, RTX and DGX are trademarks of NVIDIA Corporation. Other product names
+      are the trademarks of their owners. LocalMax has no relationship with, and no
+      endorsement from, these companies.
+    </p>
+
+    <h2>Licences</h2>
+    <ul>
+      <li>Source code: Apache-2.0.</li>
+      <li>Result data: Creative Commons Attribution 4.0.</li>
+      <li>Benchmark inputs: each asset keeps its own licence. The profile records it.</li>
+      <li>Model weights: each model keeps its own licence. LocalMax does not distribute weights.</li>
+    </ul>
+
+    <h2>Changes</h2>
+    <p>
+      These terms can change. The Git history of this page records every change. Continued
+      use after a change means that you accept the new terms.
+    </p>
+
+    <h2>Contact</h2>
+    <p>
+      Legal: <a href="mailto:legal@localmax.net">legal@localmax.net</a>.
+      Privacy and removal: <a href="mailto:privacy@localmax.net">privacy@localmax.net</a>.
+      Security: <a href="https://github.com/pavel4ai/localmax.net/security/advisories/new">private advisory</a>.
+    </p>
+
+    <p class="muted small">
+      This page is written in Simplified Technical English. It is not legal advice.
+    </p>
+  </section>
+</Layout>
+
+<style>
+  .prose { max-width: 720px; padding: 56px 24px 40px; }
+  .prose h1 { font-size: 2.1rem; margin: 12px 0 16px; }
+  .prose h2 { margin: 40px 0 12px; padding-top: 20px; border-top: 1px solid var(--border); }
+  .prose p, .prose li { color: var(--text-secondary); }
+  .prose ul { padding-left: 20px; display: grid; gap: 8px; margin: 0 0 16px; }
+  .prose code { background: var(--surface-2); padding: 1px 5px; border-radius: 3px; font-size: 0.88em; }
+  .prose a { color: var(--text-primary); border-bottom: 1px solid var(--border-strong); }
+  .callout {
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    background: var(--surface-1);
+    padding: 18px 20px;
+    margin: 24px 0 8px;
+    font-size: 14px;
+    color: var(--text-secondary);
+  }
+  .small { font-size: 12.5px; }
+</style>

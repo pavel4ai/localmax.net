@@ -143,8 +143,6 @@ def build(
     parallelism: str,
     cooling: str,
     tuning: str,
-    alias: str | None,
-    system_name: str | None,
     notes: str | None,
 ) -> dict[str, Any]:
     digest = container_digest()
@@ -188,10 +186,6 @@ def build(
         "signature": {"algorithm": "ed25519", "canonicalization": "jcs-rfc8785"},
     }
 
-    if alias:
-        manifest["submitter"]["alias"] = alias[:40]
-    if system_name:
-        manifest["submitter"]["system_name"] = system_name[:60]
     if notes:
         manifest["submitter"]["notes"] = notes[:500]
 

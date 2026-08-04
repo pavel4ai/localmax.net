@@ -24,9 +24,9 @@ import { fileURLToPath } from "node:url";
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const hardware = JSON.parse(readFileSync(join(ROOT, "benchmarks", "hardware.json"), "utf8"));
 
-const PROFILES = ["llm-entry-base", "llm-entry-int4", "llm-enthusiast-base", "llm-enthusiast-int4",
-  "llm-frontier-base", "vision-entry-base", "vision-enthusiast-base",
-  "diffusion-entry-base", "diffusion-enthusiast-base"];
+const PROFILES = ["llm-entry-fp8", "llm-entry-int4", "llm-enthusiast-fp8", "llm-enthusiast-int4",
+  "llm-frontier-fp8", "vision-entry-fp8", "vision-enthusiast-fp8",
+  "diffusion-entry-fp8", "diffusion-enthusiast-fp8"];
 
 const profiles = Object.fromEntries(
   PROFILES.map((id) => {
@@ -68,8 +68,20 @@ const OSES = [
   ["Fedora Linux 41", "6.12.7-200.fc41.x86_64"],
   ["Debian GNU/Linux 12", "6.1.0-28-amd64"],
 ];
-const ALIASES = ["voidwalker", "tensorcore", "quietbuild", "npc_lab", "hexbench", "sparkplug",
-  "cold_plate", "atlas", "delta_v", "rack9", "silentfan", "molten"];
+const SYSTEM_NAMES = JSON.parse(
+  readFileSync(join(ROOT, "benchmarks", "system-names.json"), "utf8"),
+);
+
+/** Same derivation as the Worker and the runner, so demo rows look like real ones. */
+function systemLabel(systemKey) {
+  const hex = createHash("sha256").update(systemKey).digest("hex");
+  const name = SYSTEM_NAMES.names[parseInt(hex.slice(0, 8), 16) % SYSTEM_NAMES.names.length];
+  let code = "";
+  for (let i = 0; i < 5; i++) {
+    code += SYSTEM_NAMES.alphabet[parseInt(hex.slice(8 + i * 2, 10 + i * 2), 16) % 32];
+  }
+  return { name, code, label: `${name}-${code}` };
+}
 
 const GB = 1024 ** 3;
 
@@ -300,10 +312,7 @@ function buildRow(profile, gpu, count, index, whenMs) {
       artifact("system.json", "system_report", "application/json", 9_000 + Math.floor(rand() * 3_000), runId),
       artifact("runtime.log.gz", "runtime_log", "application/gzip", 40_000 + Math.floor(rand() * 30_000), runId),
     ],
-    submitter: {
-      alias: rand() > 0.35 ? pick(ALIASES) : undefined,
-      system_key: b64(43) + "=",
-    },
+    submitter: { system_key: b64(43) + "=" },
     signature: { algorithm: "ed25519", value: b64(86) + "==", canonicalization: "jcs-rfc8785" },
   };
 
@@ -379,8 +388,8 @@ function buildRow(profile, gpu, count, index, whenMs) {
     throttle_thermal: manifest.telemetry.throttle_events.thermal_count,
     throttle_power: manifest.telemetry.throttle_events.power_count,
     temperature_peak_c: manifest.telemetry.temperature_peak_c,
-    alias: manifest.submitter.alias ?? null,
-    system_name: null,
+    system_name: systemLabel(manifest.submitter.system_key).label,
+    system_code: systemLabel(manifest.submitter.system_key).code,
     system_key: manifest.submitter.system_key,
     cooling,
     tuning,

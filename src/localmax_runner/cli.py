@@ -309,8 +309,6 @@ def cmd_run(args: argparse.Namespace) -> int:
         parallelism=parallelism,
         cooling=args.cooling,
         tuning=args.tuning,
-        alias=args.alias,
-        system_name=args.system_name,
         notes=args.notes,
     )
 
@@ -404,15 +402,26 @@ def cmd_inspect(args: argparse.Namespace) -> int:
         )
     console.print(Panel(artifacts, title="Evidence to upload", border_style="dim"))
 
+    from .naming import derive
+
     submitter = document["submitter"]
+    name, code, label = derive(submitter["system_key"])
     identity = Table(show_header=False, box=None, pad_edge=False)
     identity.add_column(style="dim", width=16)
     identity.add_column()
-    identity.add_row("system key", submitter["system_key"][:24] + "…")
-    identity.add_row("alias", submitter.get("alias") or "[dim]not set[/dim]")
-    identity.add_row("system name", submitter.get("system_name") or "[dim]not set[/dim]")
-    identity.add_row("notes", submitter.get("notes") or "[dim]none[/dim]")
-    console.print(Panel(identity, title="Your labels (the only free text published)", border_style="dim"))
+    identity.add_row("published as", f"[bold]{label}[/bold]")
+    identity.add_row("your code", f"[bold]{code}[/bold]")
+    identity.add_row("your results", f"localmax.net/systems/{code}")
+    identity.add_row("note", submitter.get("notes") or "[dim]none[/dim]")
+    console.print(Panel(
+        identity,
+        title="Public identity (generated, not chosen)",
+        border_style="dim",
+    ))
+    console.print(
+        "[dim]The name comes from a key on this machine. Keep the code to find these "
+        "results later.[/dim]"
+    )
 
     errors = manifest_mod.validate(document)
     if errors:
@@ -606,8 +615,6 @@ def build_parser() -> argparse.ArgumentParser:
     run = sub.add_parser("run", help="run a benchmark profile")
     run.add_argument("profile")
     run.add_argument("--gpus", type=int, default=None, help="number of GPUs to use")
-    run.add_argument("--alias", default=None, help="public display alias (optional)")
-    run.add_argument("--system-name", default=None, help="name for this build (optional)")
     run.add_argument("--notes", default=None, help="public note on this result (optional)")
     run.add_argument(
         "--cooling", default="unknown",

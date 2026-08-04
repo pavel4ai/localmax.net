@@ -1,23 +1,22 @@
 {
   "$schema": "../../schemas/profile.schema.json",
   "schema_version": "1.0.0",
-  "id": "diffusion-entry-base",
+  "id": "diffusion-entry-fp8",
   "version": "0.1.0",
   "frozen": false,
   "published": false,
-  "display_name": "Diffusion \u00b7 Entry \u00b7 BF16",
-  "summary": "A 4B-class model at BF16 on 12 GB. The universal baseline: every supported NVIDIA GPU from an RTX 3060 12 GB upward runs this identically, so it is the one leaderboard that spans the whole hardware range.",
+  "display_name": "Diffusion \u00b7 Entry \u00b7 FP8",
+  "summary": "Text to image at 1024 by 1024 on 12 GB. Ranked on seconds for each step. Diffusion is compute-bound, not bandwidth-bound.",
   "category": "diffusion",
   "tier": "entry",
-  "lane": "base",
+  "lane": "fp8",
   "requirements": {
     "min_vram_bytes": 12884901888,
     "min_system_ram_bytes": 17179869184,
     "min_disk_bytes": 34359738368,
     "min_driver": "550.54",
-    "min_compute_capability": "8.0",
+    "min_compute_capability": "8.9",
     "architectures": [
-      "ampere",
       "ada",
       "blackwell",
       "blackwell-gb10",
@@ -31,14 +30,14 @@
       1
     ],
     "expected_runtime_minutes": 14,
-    "expected_download_bytes": 7516192768
+    "expected_download_bytes": 4133906022
   },
   "model": {
     "repository": "stabilityai/stable-diffusion-xl-base-1.0",
     "revision": "PENDING",
-    "precision": "bf16",
+    "precision": "fp8_e4m3",
     "parameters_b": 3.5,
-    "weights_bytes": 7516192768,
+    "weights_bytes": 4133906022,
     "license": "CreativeML-Open-RAIL-M++",
     "files": []
   },
@@ -49,7 +48,7 @@
     "harness_version": "0.1.0",
     "server_ready_timeout_s": 900,
     "flags": {
-      "torch_dtype": "float16",
+      "torch_dtype": "float8_e4m3fn",
       "enable_attention_slicing": false,
       "enable_vae_slicing": false,
       "enable_model_cpu_offload": false,

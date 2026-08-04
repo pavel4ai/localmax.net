@@ -54,6 +54,7 @@ for (const g of present) {
   <div class="empty">Not enough results yet to plot.</div>
 ) : (
   <figure>
+    <div class="chart-scroll">
     <svg
       class="chart"
       viewBox={`0 0 ${W} ${H}`}
@@ -108,6 +109,7 @@ for (const g of present) {
         </text>
       ))}
     </svg>
+    </div>
 
     <ul class="legend">
       {present.map((g) => (

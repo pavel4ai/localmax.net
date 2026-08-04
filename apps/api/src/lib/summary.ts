@@ -68,7 +68,7 @@ export interface Manifest {
     throttle_events?: { thermal_count?: number; power_count?: number; reliability_count?: number };
   };
   artifacts: Array<{ name: string; kind: string; hash: string; size_bytes: number; media_type: string; required?: boolean }>;
-  submitter: { alias?: string; system_name?: string; system_key: string; notes?: string };
+  submitter: { system_key: string; notes?: string };
   signature: { algorithm: string; value: string };
 }
 
@@ -237,8 +237,8 @@ export interface ResultRow {
   throttle_thermal: number;
   throttle_power: number;
   temperature_peak_c: number | null;
-  alias: string | null;
   system_name: string | null;
+  system_code: string | null;
   system_key: string | null;
   cooling: string | null;
   tuning: string | null;
@@ -254,6 +254,7 @@ export function buildRow(
   ranked: boolean,
   findings: Finding[],
   acceptedAt: string,
+  label: { name: string; code: string; label: string },
 ): ResultRow {
   const gpu = manifest.hardware.gpus[0]!;
   const t = manifest.telemetry;
@@ -338,8 +339,8 @@ export function buildRow(
     throttle_power: t.throttle_events?.power_count ?? 0,
     temperature_peak_c: t.temperature_peak_c ?? null,
 
-    alias: manifest.submitter.alias ?? null,
-    system_name: manifest.submitter.system_name ?? null,
+    system_name: label.label,
+    system_code: label.code,
     system_key: manifest.submitter.system_key,
     cooling: manifest.hardware.cooling ?? null,
     tuning: manifest.hardware.tuning ?? null,
@@ -368,6 +369,6 @@ export const RESULT_COLUMNS = [
   "vram_peak_bytes", "power_avg_w", "power_peak_w", "power_domain",
   "energy_per_unit_j", "efficiency", "telemetry_coverage_pct",
   "throttle_thermal", "throttle_power", "temperature_peak_c",
-  "alias", "system_name", "system_key", "cooling", "tuning", "notes",
+  "system_name", "system_code", "system_key", "cooling", "tuning", "notes",
   "manifest_json", "findings_json",
 ] as const satisfies readonly (keyof ResultRow)[];

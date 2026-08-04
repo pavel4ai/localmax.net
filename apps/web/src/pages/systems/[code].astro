@@ -1,0 +1,110 @@
+---
+import Layout from "../../components/Layout.astro";
+import ResultTable from "../../components/ResultTable.astro";
+import StatTile from "../../components/StatTile.astro";
+import { api, type ResultRow } from "../../lib/api";
+import { ago, compact, isoDate } from "../../lib/format";
+
+const code = (Astro.params.code ?? "").toUpperCase();
+
+interface SystemDetail {
+  code: string;
+  name: string | null;
+  summary: {
+    total: number; ranked: number; profiles: number; gpus: number;
+    first_seen: string; latest: string;
+  };
+  results: ResultRow[];
+}
+
+const detail = /^[0-9A-HJKMNP-TV-Z]{5}$/.test(code)
+  ? await api<SystemDetail>(`/v1/systems/${code}`)
+  : null;
+---
+
+<Layout title={detail?.name ?? `System ${code}`} noindex>
+  <section class="wrap" style="padding:48px 0 0">
+    <div class="eyebrow">System</div>
+
+    {!detail ? (
+      <>
+        <h1 style="margin:12px 0 14px;font-size:2rem">No system {code}</h1>
+        <p class="lede">
+          No results use this code. Check the code from your terminal. Run
+          <code>localmax inspect</code> to see it again.
+        </p>
+        <p style="margin-top:20px"><a href="/results" class="btn">All results</a></p>
+      </>
+    ) : (
+      <>
+        <h1 style="margin:12px 0 14px;font-size:2rem">{detail.name}</h1>
+        <p class="lede">
+          Every result from one machine. The name comes from a key on that machine. It does
+          not identify a person.
+        </p>
+
+        <div class="grid grid-4" style="margin-top:26px">
+          <StatTile label="Results" value={compact(detail.summary.total)} note={`${compact(detail.summary.ranked ?? 0)} ranked`} />
+          <StatTile label="Profiles" value={String(detail.summary.profiles)} />
+          <StatTile label="GPU models" value={String(detail.summary.gpus)} />
+          <StatTile label="Latest" value={ago(detail.summary.latest)} note={`first ${isoDate(detail.summary.first_seen)}`} />
+        </div>
+
+        <div class="share">
+          <div class="tile-label">Share this page</div>
+          <code id="share-url">localmax.net/systems/{code}</code>
+          <button id="copy" type="button" class="btn">Copy</button>
+        </div>
+      </>
+    )}
+  </section>
+
+  {detail && (
+    <section class="section wrap">
+      <h2>Results</h2>
+      <div style="margin-top:16px">
+        <ResultTable results={detail.results} />
+      </div>
+    </section>
+  )}
+</Layout>
+
+<script is:inline>
+  document.getElementById("copy")?.addEventListener("click", async (e) => {
+    const button = e.currentTarget;
+    const url = "https://" + document.getElementById("share-url").textContent.trim();
+    try {
+      await navigator.clipboard.writeText(url);
+      button.textContent = "Copied";
+      setTimeout(() => { button.textContent = "Copy"; }, 2000);
+    } catch (_) {
+      // Clipboard access needs a secure context and permission. The URL is on screen
+      // either way, so say what happened instead of failing silently.
+      button.textContent = "Select it above";
+    }
+  });
+</script>
+
+<style>
+  .share {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 24px;
+    padding: 16px 18px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface-1);
+  }
+  .share code {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--text-primary);
+    overflow-wrap: anywhere;
+  }
+  .share .btn { padding: 6px 12px; font-size: 13px; }
+  @media (max-width: 480px) {
+    .share { flex-direction: column; align-items: flex-start; }
+  }
+</style>

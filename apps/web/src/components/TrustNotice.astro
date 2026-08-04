@@ -1,0 +1,100 @@
+---
+/**
+ * Shown before anyone is asked to run anything.
+ *
+ * The runner reads hardware and starts an inference server on the contributor's machine.
+ * That is a real thing to ask of a stranger, so the code comes first and the data policy is
+ * stated in full — not linked to, and not softened.
+ */
+interface Props {
+  compact?: boolean;
+}
+const { compact = false } = Astro.props;
+---
+
+<div class="trust">
+  <div class="trust-head">
+    <h2>Read the code first</h2>
+    <a href="https://github.com/pavel4ai/localmax.net" class="btn">Source on GitHub</a>
+  </div>
+  <p class="trust-lede">
+    LocalMax runs on your machine. Examine the source before you run it. Every part is
+    public: the runner, the container files, the profiles and the checks.
+  </p>
+
+  {!compact && (
+    <div class="trust-grid">
+      <div>
+        <div class="tile-label">Collected</div>
+        <p>
+          GPU model, VRAM, driver, CUDA, PCIe link, power limit and clocks. CPU model and
+          core count. RAM. OS and kernel. All measured values, the raw records for each
+          request, and the telemetry.
+        </p>
+      </div>
+      <div>
+        <div class="tile-label">Never collected</div>
+        <p>
+          Hostname. Username. File paths. GPU serial numbers. Board UUIDs. MAC addresses.
+          Environment variables. Data about other processes. The runner removes secrets and
+          paths from logs on your machine, before it writes them.
+        </p>
+      </div>
+      <div>
+        <div class="tile-label">Your name is generated</div>
+        <p>
+          LocalMax gives your machine a name such as <code>Rocinante-K7X2P</code>. The name
+          comes from a key on your machine. You do not type a name. Keep the 5-character
+          code. Use it to find your results at <code>/systems/CODE</code>.
+        </p>
+      </div>
+    </div>
+  )}
+
+  <p class="trust-foot">
+    Submission is voluntary. You control what you send. Command
+    <code>localmax inspect</code> shows the full content before upload.{" "}
+    <a href="/legal">Legal</a> · <a href="/privacy">Privacy</a>
+  </p>
+</div>
+
+<style>
+  .trust {
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    background: var(--surface-1);
+    padding: 24px;
+  }
+  .trust-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .trust-head h2 { font-size: 1.15rem; }
+  .trust-lede { margin: 10px 0 0; font-size: 14px; max-width: 62ch; }
+  .trust-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 20px;
+    margin-top: 22px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+  }
+  .trust-grid p { font-size: 12.5px; margin: 8px 0 0; line-height: 1.55; }
+  .trust-foot {
+    margin: 20px 0 0;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    font-size: 12.5px;
+    color: var(--text-muted);
+    max-width: none;
+  }
+  .trust-foot a { color: var(--text-secondary); border-bottom: 1px solid var(--border-strong); }
+  code { background: var(--surface-2); padding: 1px 5px; border-radius: 3px; }
+  @media (max-width: 560px) {
+    .trust { padding: 18px; }
+    .trust-head h2 { font-size: 1.05rem; }
+  }
+</style>

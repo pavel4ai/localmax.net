@@ -38,6 +38,7 @@ const percentile =
   <div class="empty">Not enough results yet to show a distribution.</div>
 ) : (
   <figure>
+    <div class="chart-scroll">
     <svg
       class="chart"
       viewBox={`0 0 ${W} ${height}`}
@@ -113,6 +114,7 @@ const percentile =
         </g>
       ))}
     </svg>
+    </div>
     <figcaption>
       {caption ?? `${sorted.length} ranked result${sorted.length === 1 ? "" : "s"}`}
       {p50 !== null && <> · median {num(p50)} {unit}</>}

@@ -51,7 +51,7 @@
       "properties": {
         "id": {
           "type": "string",
-          "pattern": "^(llm|vision|diffusion)-(entry|enthusiast|frontier)-(base|int4|nvfp4|fp8)$"
+          "pattern": "^(llm|vision|diffusion)-(entry|enthusiast|frontier)-(fp8|int4|nvfp4|bf16)$"
         },
         "version": {
           "$ref": "common.schema.json#/$defs/semver"
@@ -567,22 +567,12 @@
     },
     "submitter": {
       "type": "object",
-      "description": "User-supplied labels only. Never used in any score.",
+      "description": "Pseudonymous system identity. The public label shown on the site is derived from system_key, so no result carries a name a person chose.",
       "required": [
         "system_key"
       ],
       "additionalProperties": false,
       "properties": {
-        "alias": {
-          "type": "string",
-          "maxLength": 40,
-          "pattern": "^[\\w .\\-]{0,40}$"
-        },
-        "system_name": {
-          "type": "string",
-          "maxLength": 60,
-          "pattern": "^[\\w .\\-]{0,60}$"
-        },
         "system_key": {
           "type": "string",
           "pattern": "^[A-Za-z0-9+/]{43}=$",

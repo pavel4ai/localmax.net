@@ -1,6 +1,7 @@
 import type { Env, Finding, ValidationMessage } from "./env";
 import { PROFILES } from "./generated/registry";
 import { buildRow, RESULT_COLUMNS, type Manifest, type ResultRow } from "./lib/summary";
+import { deriveSystemLabel } from "./lib/system-name";
 import { findDuplicate, validateSubmission } from "./lib/validation";
 
 /**
@@ -75,6 +76,8 @@ async function processOne(env: Env, runId: string): Promise<void> {
     });
   }
 
+  const label = await deriveSystemLabel(manifest.submitter.system_key);
+
   const row = buildRow(
     manifest,
     profile,
@@ -82,6 +85,7 @@ async function processOne(env: Env, runId: string): Promise<void> {
     outcome.ranked && !duplicate,
     findings,
     now,
+    label,
   );
 
   const columns = RESULT_COLUMNS.join(", ");

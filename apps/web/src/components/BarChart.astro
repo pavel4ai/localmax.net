@@ -41,6 +41,7 @@ const better = direction === "higher_is_better" ? "higher is better" : "lower is
   <div class="empty">No results yet for this view.</div>
 ) : (
   <figure>
+    <div class="chart-scroll">
     <svg
       class="chart"
       viewBox={`0 0 ${W} ${H}`}
@@ -93,6 +94,7 @@ const better = direction === "higher_is_better" ? "higher is better" : "lower is
         );
       })}
     </svg>
+    </div>
     {caption && <figcaption>{caption} Values in {unit}; {better}.</figcaption>}
   </figure>
 )}

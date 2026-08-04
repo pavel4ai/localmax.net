@@ -1,22 +1,23 @@
 {
   "$schema": "../../schemas/profile.schema.json",
   "schema_version": "1.0.0",
-  "id": "diffusion-frontier-base",
+  "id": "diffusion-enthusiast-fp8",
   "version": "0.1.0",
   "frozen": false,
   "published": false,
-  "display_name": "Diffusion \u00b7 Frontier \u00b7 BF16",
-  "summary": "A 4B-class model at BF16 on 12 GB. The universal baseline: every supported NVIDIA GPU from an RTX 3060 12 GB upward runs this identically, so it is the one leaderboard that spans the whole hardware range.",
+  "display_name": "Diffusion \u00b7 Enthusiast \u00b7 FP8",
+  "summary": "Text to image at 1024 by 1024, sized to fill 24 GB.",
   "category": "diffusion",
-  "tier": "frontier",
-  "lane": "base",
+  "tier": "enthusiast",
+  "lane": "fp8",
   "requirements": {
-    "min_vram_bytes": 68719476736,
-    "min_system_ram_bytes": 68719476736,
-    "min_disk_bytes": 77309411328,
+    "min_vram_bytes": 25769803776,
+    "min_system_ram_bytes": 34359738368,
+    "min_disk_bytes": 54760833024,
     "min_driver": "550.54",
-    "min_compute_capability": "8.0",
+    "min_compute_capability": "8.9",
     "architectures": [
+      "ada",
       "blackwell",
       "blackwell-gb10",
       "hopper"
@@ -26,19 +27,18 @@
       "linux/arm64"
     ],
     "gpu_count": [
-      1,
-      2
+      1
     ],
     "expected_runtime_minutes": 14,
-    "expected_download_bytes": 25769803776
+    "expected_download_bytes": 10039486054
   },
   "model": {
-    "repository": "black-forest-labs/FLUX.1-schnell",
+    "repository": "stabilityai/stable-diffusion-3.5-large",
     "revision": "PENDING",
-    "precision": "bf16",
-    "parameters_b": 12.0,
-    "weights_bytes": 25769803776,
-    "license": "Apache-2.0",
+    "precision": "fp8_e4m3",
+    "parameters_b": 8.1,
+    "weights_bytes": 10039486054,
+    "license": "Stability-Community",
     "files": []
   },
   "runtime": {
@@ -48,7 +48,7 @@
     "harness_version": "0.1.0",
     "server_ready_timeout_s": 900,
     "flags": {
-      "torch_dtype": "float16",
+      "torch_dtype": "float8_e4m3fn",
       "enable_attention_slicing": false,
       "enable_vae_slicing": false,
       "enable_model_cpu_offload": false,

@@ -1,24 +1,22 @@
 {
   "$schema": "../../schemas/profile.schema.json",
   "schema_version": "1.0.0",
-  "id": "llm-enthusiast-base",
+  "id": "llm-frontier-fp8",
   "version": "0.1.0",
   "frozen": false,
   "published": false,
-  "display_name": "LLM \u00b7 Enthusiast \u00b7 BF16",
-  "summary": "A 4B-class model at BF16 on 12 GB. The universal baseline: every supported NVIDIA GPU from an RTX 3060 12 GB upward runs this identically, so it is the one leaderboard that spans the whole hardware range.",
+  "display_name": "LLM \u00b7 Frontier \u00b7 FP8",
+  "summary": "A 32B model at FP8, sized to fill 64 GB. It fits a DGX Spark and a dual RTX PRO 6000 workstation. It accepts 1 or 2 GPUs, ranked separately.",
   "category": "llm",
-  "tier": "enthusiast",
-  "lane": "base",
+  "tier": "frontier",
+  "lane": "fp8",
   "requirements": {
-    "min_vram_bytes": 25769803776,
-    "min_system_ram_bytes": 34359738368,
-    "min_disk_bytes": 51539607552,
+    "min_vram_bytes": 68719476736,
+    "min_system_ram_bytes": 68719476736,
+    "min_disk_bytes": 206158430208,
     "min_driver": "550.54",
-    "min_compute_capability": "8.0",
+    "min_compute_capability": "8.9",
     "architectures": [
-      "ampere",
-      "ada",
       "blackwell",
       "blackwell-gb10",
       "hopper"
@@ -28,17 +26,18 @@
       "linux/arm64"
     ],
     "gpu_count": [
-      1
+      1,
+      2
     ],
     "expected_runtime_minutes": 14,
-    "expected_download_bytes": 17179869184
+    "expected_download_bytes": 37795712204
   },
   "model": {
-    "repository": "Qwen/Qwen3-8B",
+    "repository": "Qwen/Qwen3-32B",
     "revision": "PENDING",
-    "precision": "bf16",
-    "parameters_b": 8.0,
-    "weights_bytes": 17179869184,
+    "precision": "fp8_e4m3",
+    "parameters_b": 32.0,
+    "weights_bytes": 37795712204,
     "license": "Apache-2.0",
     "files": []
   },
@@ -49,14 +48,15 @@
     "harness_version": "0.7.0",
     "server_ready_timeout_s": 900,
     "flags": {
-      "dtype": "bfloat16",
-      "max-model-len": 16384,
+      "dtype": "auto",
+      "max-model-len": 32768,
       "gpu-memory-utilization": 0.9,
       "max-num-seqs": 16,
       "enforce-eager": false,
       "disable-log-requests": true,
       "tensor-parallel-size": 1,
-      "swap-space": 0
+      "swap-space": 0,
+      "quantization": "fp8"
     },
     "flag_overrides_allowed": []
   },
@@ -238,7 +238,8 @@
   },
   "notes": [
     "Release candidate. The runtime and harness versions are pinned; the model revision is not frozen until the bake-off confirms fit on the tier's minimum-VRAM reference system, so this leaderboard is provisional.",
-    "Decode and prefill throughput are reported separately: decode tracks memory bandwidth, prefill tracks compute.",
-    "BF16 lane. Ranked only against other BF16 results, because comparing precisions would compare different numerical workloads."
+    "A 32B at BF16 is roughly 64 GB, which fits both a DGX Spark and a 2x96 GB workstation. A 70B BF16 baseline was rejected because it would exclude DGX Spark from its own tier.",
+    "Both 1 and 2 GPU results are accepted, ranked separately. Tensor parallelism is recorded as a comparability key.",
+    "RTX PRO 6000 Blackwell has no NVLink, so a 2-GPU result there communicates over PCIe. PCIe generation and width are recorded and shown on the result page."
   ]
 }

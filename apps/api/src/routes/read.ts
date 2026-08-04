@@ -18,7 +18,7 @@ const LIST_COLUMNS = `
   seconds_per_step_s, images_per_minute, quality_gate_pct, longcontext_pass, model_load_s,
   vram_peak_bytes, power_avg_w, power_peak_w, power_domain, energy_per_unit_j, efficiency,
   telemetry_coverage_pct, throttle_thermal, throttle_power, temperature_peak_c,
-  alias, system_name, cooling, tuning
+  system_name, system_code, cooling, tuning
 `;
 
 const SORTABLE: Record<string, string> = {
@@ -194,7 +194,7 @@ app.get("/results", async (c) => {
   add("cooling", "cooling");
   add("tuning", "tuning");
   add("arch", "gpu_architecture");
-  add("system", "system_key");
+  add("system", "system_code");
   add("gpu_count", "gpu_count", Number);
   if (c.req.query("ranked") === "1") filters.push(["ranked", "=", 1]);
 
@@ -361,6 +361,44 @@ app.get("/hardware/:key", async (c) => {
             .map(([k]) => k)
         : [],
     };
+  });
+});
+
+// ---------------------------------------------------------------------------
+// One system's own results
+// ---------------------------------------------------------------------------
+
+/**
+ * Every result from one system, by its public code.
+ *
+ * This is how a contributor finds their own work again. The code is printed by the runner
+ * and derived from a key held only on their machine, so it is theirs to keep or share; it
+ * identifies a machine, never a person.
+ */
+app.get("/systems/:code", async (c) => {
+  const code = c.req.param("code").toUpperCase();
+  if (!/^[0-9A-HJKMNP-TV-Z]{5}$/.test(code)) {
+    return fail(c, "bad_request", "A system code is five characters.");
+  }
+
+  return cached(c, 60, async () => {
+    const [rows, summary] = await Promise.all([
+      c.env.DB.prepare(
+        `SELECT ${LIST_COLUMNS} FROM results WHERE system_code = ?1
+          ORDER BY accepted_at DESC LIMIT 200`,
+      ).bind(code).all(),
+      c.env.DB.prepare(
+        `SELECT COUNT(*) AS total, SUM(ranked) AS ranked,
+                COUNT(DISTINCT profile_id) AS profiles,
+                COUNT(DISTINCT gpu_key) AS gpus,
+                MIN(created_at) AS first_seen, MAX(accepted_at) AS latest,
+                MAX(system_name) AS name
+           FROM results WHERE system_code = ?1`,
+      ).bind(code).first<{ total: number; name: string | null }>(),
+    ]);
+
+    if (!summary || summary.total === 0) return null;
+    return { code, name: summary.name, summary, results: rows.results };
   });
 });
 

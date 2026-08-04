@@ -6,7 +6,7 @@
   "frozen": false,
   "published": false,
   "display_name": "LLM \u00b7 Entry \u00b7 NVFP4",
-  "summary": "A 4B-class model at BF16 on 12 GB. The universal baseline: every supported NVIDIA GPU from an RTX 3060 12 GB upward runs this identically, so it is the one leaderboard that spans the whole hardware range.",
+  "summary": "An 8B model at NVFP4 on 12 GB. NVFP4 needs Blackwell.",
   "category": "llm",
   "tier": "entry",
   "lane": "nvfp4",

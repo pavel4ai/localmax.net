@@ -86,7 +86,7 @@ export interface ResultRow {
   profile_version: string;
   category: "llm" | "vision" | "diffusion";
   tier: "entry" | "enthusiast" | "frontier";
-  lane: "base" | "int4" | "nvfp4" | "fp8";
+  lane: "fp8" | "int4" | "nvfp4" | "bf16";
   gpu_key: string;
   gpu_name: string;
   gpu_count: number;
@@ -132,8 +132,8 @@ export interface ResultRow {
   throttle_thermal: number | null;
   throttle_power: number | null;
   temperature_peak_c: number | null;
-  alias: string | null;
   system_name: string | null;
+  system_code: string | null;
   cooling: string | null;
   tuning: string | null;
 }
@@ -153,7 +153,7 @@ export interface ProfileSummary {
   summary: string | null;
   category: "llm" | "vision" | "diffusion";
   tier: "entry" | "enthusiast" | "frontier";
-  lane: "base" | "int4" | "nvfp4" | "fp8";
+  lane: "fp8" | "int4" | "nvfp4" | "bf16";
   version: string;
   frozen: boolean;
   hash: string;

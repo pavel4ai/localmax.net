@@ -8,7 +8,7 @@ const profiles = data?.profiles ?? [];
 
 const categories = ["llm", "vision", "diffusion"] as const;
 const tiers = ["entry", "enthusiast", "frontier"] as const;
-const lanes = ["base", "int4", "nvfp4"] as const;
+const lanes = ["fp8", "int4", "nvfp4"] as const;
 
 const find = (c: string, t: string, l: string) =>
   profiles.find((p) => p.category === c && p.tier === t && p.lane === l);

@@ -123,10 +123,18 @@ export const TIER_LABEL: Record<string, string> = {
 };
 
 export const LANE_LABEL: Record<string, string> = {
-  base: "BF16",
+  fp8: "FP8",
   int4: "INT4",
   nvfp4: "NVFP4",
-  fp8: "FP8",
+  bf16: "BF16",
+};
+
+/** Which hardware each lane can run. Shown wherever a lane is offered. */
+export const LANE_HARDWARE: Record<string, string> = {
+  fp8: "Ada and newer",
+  int4: "Ampere and newer",
+  nvfp4: "Blackwell only",
+  bf16: "reserved",
 };
 
 export const TIER_VRAM: Record<string, string> = {
@@ -136,21 +144,20 @@ export const TIER_VRAM: Record<string, string> = {
 };
 
 /**
- * A stable, human-readable label for a contributed system.
+ * The public label for a contributed system.
  *
- * Contributors are anonymous by default, so most results have no name. Falling back to the
- * GPU model would make every unnamed row on a leaderboard read identically and duplicate
- * the GPU column; the tail of the run ID at least identifies the row uniquely.
+ * Generated from the machine's public key, never chosen by a person. The same machine
+ * always gets the same label, so results accumulate under one name, and the label says
+ * nothing about who ran it.
  */
 export function systemLabel(r: {
   system_name: string | null;
-  alias: string | null;
+  system_code?: string | null;
   gpu_name: string;
   gpu_count: number;
   run_id?: string;
 }): string {
   if (r.system_name) return r.system_name;
-  if (r.alias) return `${r.alias}'s system`;
   if (r.run_id) return `System ${r.run_id.slice(-6)}`;
   return r.gpu_count > 1 ? `${r.gpu_count}× ${short(r.gpu_name)}` : short(r.gpu_name);
 }

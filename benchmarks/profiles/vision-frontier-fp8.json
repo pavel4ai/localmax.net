@@ -1,24 +1,22 @@
 {
   "$schema": "../../schemas/profile.schema.json",
   "schema_version": "1.0.0",
-  "id": "vision-entry-base",
+  "id": "vision-frontier-fp8",
   "version": "0.1.0",
   "frozen": false,
   "published": false,
-  "display_name": "Vision \u00b7 Entry \u00b7 BF16",
-  "summary": "A 4B-class model at BF16 on 12 GB. The universal baseline: every supported NVIDIA GPU from an RTX 3060 12 GB upward runs this identically, so it is the one leaderboard that spans the whole hardware range.",
+  "display_name": "Vision \u00b7 Frontier \u00b7 FP8",
+  "summary": "A 32B vision model at FP8, sized to fill 64 GB.",
   "category": "vision",
-  "tier": "entry",
-  "lane": "base",
+  "tier": "frontier",
+  "lane": "fp8",
   "requirements": {
-    "min_vram_bytes": 12884901888,
-    "min_system_ram_bytes": 17179869184,
-    "min_disk_bytes": 34359738368,
+    "min_vram_bytes": 68719476736,
+    "min_system_ram_bytes": 68719476736,
+    "min_disk_bytes": 212600881152,
     "min_driver": "550.54",
-    "min_compute_capability": "8.0",
+    "min_compute_capability": "8.9",
     "architectures": [
-      "ampere",
-      "ada",
       "blackwell",
       "blackwell-gb10",
       "hopper"
@@ -28,17 +26,18 @@
       "linux/arm64"
     ],
     "gpu_count": [
-      1
+      1,
+      2
     ],
     "expected_runtime_minutes": 14,
-    "expected_download_bytes": 9663676416
+    "expected_download_bytes": 38976828211
   },
   "model": {
-    "repository": "Qwen/Qwen3-VL-4B-Instruct",
+    "repository": "Qwen/Qwen3-VL-32B-Instruct",
     "revision": "PENDING",
-    "precision": "bf16",
-    "parameters_b": 4.0,
-    "weights_bytes": 9663676416,
+    "precision": "fp8_e4m3",
+    "parameters_b": 32.0,
+    "weights_bytes": 38976828211,
     "license": "Apache-2.0",
     "files": []
   },
@@ -49,7 +48,7 @@
     "harness_version": "0.7.0",
     "server_ready_timeout_s": 900,
     "flags": {
-      "dtype": "bfloat16",
+      "dtype": "auto",
       "max-model-len": 32768,
       "gpu-memory-utilization": 0.9,
       "max-num-seqs": 16,
@@ -57,7 +56,8 @@
       "disable-log-requests": true,
       "tensor-parallel-size": 1,
       "swap-space": 0,
-      "limit-mm-per-prompt": "image=1"
+      "limit-mm-per-prompt": "image=1",
+      "quantization": "fp8"
     },
     "flag_overrides_allowed": []
   },

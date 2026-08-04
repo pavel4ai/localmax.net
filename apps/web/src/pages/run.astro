@@ -1,10 +1,11 @@
 ---
 import Layout from "../components/Layout.astro";
+import TrustNotice from "../components/TrustNotice.astro";
 import { api, type ProfileSummary } from "../lib/api";
 import { LANE_LABEL, TIER_LABEL, bytes, num } from "../lib/format";
 
 const data = await api<{ profiles: ProfileSummary[] }>("/v1/profiles");
-const profiles = (data?.profiles ?? []).filter((p) => p.lane === "base");
+const profiles = (data?.profiles ?? []).filter((p) => p.lane === "fp8");
 ---
 
 <Layout title="Run a benchmark" description="How to run a LocalMax benchmark on your own hardware and publish the result.">
@@ -12,17 +13,19 @@ const profiles = (data?.profiles ?? []).filter((p) => p.lane === "base");
     <div class="eyebrow">Run</div>
     <h1 style="margin:12px 0 16px;font-size:2.1rem">Run a benchmark</h1>
     <p class="lede">
-      One container, one command. No account, no GitHub token, no email address. You see the
-      exact manifest before anything leaves your machine.
+      One container. One command. No account. No email address.
     </p>
+  </section>
+
+  <section class="wrap" style="padding-top:28px">
+    <TrustNotice />
   </section>
 
   <section class="section wrap">
     <h2>1. Check your system</h2>
     <p style="margin-top:10px">
-      Linux with the NVIDIA driver and Container Toolkit installed. x86_64 or aarch64 —
-      DGX Spark is supported natively. WSL2 works but is marked experimental, and results
-      from it are labelled as such.
+      You need Linux, the NVIDIA driver and the NVIDIA Container Toolkit. LocalMax supports
+      x86_64 and aarch64. WSL2 works, but it is experimental. LocalMax marks a WSL2 result.
     </p>
     <pre class="cmd"><span class="c"># Reports driver, CUDA, GPU, disk, RAM and which profiles you qualify for</span>
 docker run --rm --gpus all ghcr.io/pavel4ai/localmax-llm:latest doctor</pre>
@@ -31,8 +34,8 @@ docker run --rm --gpus all ghcr.io/pavel4ai/localmax-llm:latest doctor</pre>
   <section class="section wrap">
     <h2>2. Pick a profile</h2>
     <p style="margin-top:10px">
-      Pick the highest tier your total VRAM supports. Running a lower tier as well is
-      useful — it is how a system gets comparable across the whole range.
+      Select the highest tier that your total VRAM permits. Then run a lower tier also. This
+      makes your system comparable across the full range.
     </p>
     <div class="table-scroll" style="margin-top:18px">
       <table>
@@ -46,7 +49,7 @@ docker run --rm --gpus all ghcr.io/pavel4ai/localmax-llm:latest doctor</pre>
           {profiles.map((p) => (
             <tr>
               <td class="primary"><a href={`/benchmarks/${p.id}`}>{p.id}</a></td>
-              <td class="dim">{TIER_LABEL[p.tier]} · {LANE_LABEL[p.lane]}</td>
+                      <td class="dim">{TIER_LABEL[p.tier]} · {LANE_LABEL[p.lane]}</td>
               <td class="num dim">{bytes(p.requirements.min_vram_bytes)}</td>
               <td class="dim">{num(p.model.parameters_b, 0)}B {p.model.precision}</td>
               <td class="num dim">{bytes(p.requirements.expected_download_bytes as number)}</td>
@@ -76,17 +79,17 @@ docker run --rm --gpus all -v ~/.localmax:/cache \
 docker run --rm --gpus all -v ~/.localmax:/cache \
   ghcr.io/pavel4ai/localmax-diffusion:latest run diffusion-entry-base</pre>
     <p style="margin-top:16px">
-      The container starts the pinned inference runtime, waits for it to become ready, runs a
-      warm-up, then drives the endpoint with the fixed workload while sampling GPU telemetry.
-      Close other GPU work first — the runner records what it sees, including your browser.
+      The container starts the runtime and waits for it. Then it runs a warm-up. Then it runs
+      the fixed workload and records telemetry. Stop all other GPU work first. The runner
+      measures everything on the GPU, including your browser.
     </p>
   </section>
 
   <section class="section wrap">
     <h2>4. Inspect before you publish</h2>
     <p style="margin-top:10px">
-      Nothing is transmitted until you accept it. <code>inspect</code> works entirely offline
-      and prints the manifest and every artifact that would be uploaded.
+      Nothing goes to LocalMax until you accept it. Command <code>inspect</code> needs no
+      network. It shows the manifest and each file for upload.
     </p>
     <pre class="cmd">docker run --rm -v ~/.localmax:/cache \
   ghcr.io/pavel4ai/localmax-llm:latest inspect LAST</pre>
@@ -94,17 +97,17 @@ docker run --rm --gpus all -v ~/.localmax:/cache \
       <div class="tile">
         <div class="tile-label">Collected</div>
         <div class="body">
-          GPU model, VRAM, driver, CUDA, PCIe link, power limit and clocks; CPU model and core
-          count; RAM; OS and kernel; every measured metric, the raw per-request records, and
-          the telemetry trace.
+          GPU model, VRAM, driver, CUDA, PCIe link, power limit and clocks. CPU model and
+          core count. RAM. OS and kernel. All measured values, the raw records and the
+          telemetry.
         </div>
       </div>
       <div class="tile">
         <div class="tile-label">Never collected</div>
         <div class="body">
-          Hostname, username, filesystem paths, GPU serial numbers or board UUIDs, MAC
-          addresses, environment variables, or anything about unrelated processes. Logs are
-          redacted locally before they are written.
+          Hostname. Username. File paths. GPU serial numbers. Board UUIDs. MAC addresses.
+          Environment variables. Data about other processes. The runner removes secrets from
+          logs on your machine.
         </div>
       </div>
     </div>
@@ -115,15 +118,12 @@ docker run --rm --gpus all -v ~/.localmax:/cache \
     <pre class="cmd">docker run --rm -v ~/.localmax:/cache \
   ghcr.io/pavel4ai/localmax-llm:latest submit LAST</pre>
     <p style="margin-top:16px">
-      The CLI prints a short verification link. Open it, complete a one-click browser check,
-      and the upload proceeds. That check is the only thing standing between an anonymous
-      contributor and the leaderboard — it exists to make bulk fabrication expensive, not to
-      identify you.
+      The CLI shows a verification link. Open the link. Complete the check. The upload then
+      starts. The check makes mass fabrication expensive. It does not identify you.
     </p>
     <p>
-      Your result appears within a minute or two. It is validated asynchronously: every
-      derived metric is recomputed from your raw records before it is accepted, and the
-      finding list on your result page tells you exactly what passed.
+      Your result appears in one or two minutes. LocalMax computes each metric again from
+      your raw records before it accepts the result. Your result page lists each check.
     </p>
   </section>
 
@@ -131,10 +131,9 @@ docker run --rm --gpus all -v ~/.localmax:/cache \
     <div class="panel" style="max-width:var(--measure)">
       <h3>If something fails</h3>
       <p style="margin-top:10px">
-        An out-of-memory failure on a 12 GB card is a legitimate result and is worth
-        submitting: it records that this profile does not fit that configuration, which is
-        information the leaderboard needs. The runner marks the workload failed rather than
-        silently retrying with different settings.
+        An out-of-memory failure is a valid result. Submit it. It records that the profile
+        does not fit that hardware. The runner marks the workload as failed. It does not
+        retry with different settings.
       </p>
       <p style="margin-bottom:0">
         Report problems at

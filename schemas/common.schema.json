@@ -28,8 +28,8 @@
     },
     "lane": {
       "type": "string",
-      "enum": ["base", "int4", "nvfp4", "fp8"],
-      "description": "Quantization lane. 'base' is BF16/FP16 and is the universal ranked lane. 'fp8' is reserved; no v1 profile uses it."
+      "enum": ["fp8", "int4", "nvfp4", "bf16"],
+      "description": "Quantization lane. Each is ranked separately. 'fp8' is the default and needs Ada or newer. 'int4' has the widest hardware support and includes Ampere. 'nvfp4' needs Blackwell. 'bf16' is reserved."
     },
     "precision": {
       "type": "string",

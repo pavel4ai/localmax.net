@@ -6,123 +6,237 @@
   "$defs": {
     "challengeRequest": {
       "type": "object",
-      "required": ["runner_version", "profile_id"],
+      "required": [
+        "runner_version",
+        "profile_id"
+      ],
       "additionalProperties": false,
       "properties": {
-        "runner_version": { "$ref": "common.schema.json#/$defs/semver" },
-        "profile_id": { "type": "string" }
+        "runner_version": {
+          "$ref": "common.schema.json#/$defs/semver"
+        },
+        "profile_id": {
+          "type": "string"
+        }
       }
     },
     "challengeResponse": {
       "type": "object",
-      "required": ["challenge_id", "verify_url", "expires_at", "poll_after_ms"],
+      "required": [
+        "challenge_id",
+        "verify_url",
+        "expires_at",
+        "poll_after_ms"
+      ],
       "additionalProperties": false,
       "properties": {
-        "challenge_id": { "type": "string", "pattern": "^[0-9a-f]{32}$" },
-        "verify_url": { "type": "string", "format": "uri" },
-        "expires_at": { "type": "string", "format": "date-time" },
-        "poll_after_ms": { "type": "integer", "minimum": 500 }
+        "challenge_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{32}$"
+        },
+        "verify_url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "poll_after_ms": {
+          "type": "integer",
+          "minimum": 500
+        }
       }
     },
     "challengeStatus": {
       "type": "object",
-      "required": ["state"],
+      "required": [
+        "state"
+      ],
       "additionalProperties": false,
       "properties": {
-        "state": { "type": "string", "enum": ["pending", "solved", "expired"] },
+        "state": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "solved",
+            "expired"
+          ]
+        },
         "submission_token": {
           "type": "string",
           "description": "Present only when solved. Single use, 30 minute lifetime."
         }
       }
     },
-
     "createSubmissionRequest": {
       "type": "object",
-      "required": ["submission_token", "nonce", "manifest"],
+      "required": [
+        "submission_token",
+        "nonce",
+        "manifest"
+      ],
       "additionalProperties": false,
       "properties": {
-        "submission_token": { "type": "string", "minLength": 32, "maxLength": 200 },
+        "submission_token": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 200
+        },
         "nonce": {
           "type": "string",
           "pattern": "^[0-9a-f]{32}$",
           "description": "Client-generated. Replaying the same nonce returns the original response instead of creating a second submission."
         },
-        "manifest": { "$ref": "result.schema.json" }
+        "manifest": {
+          "$ref": "result.schema.json"
+        }
       }
     },
     "createSubmissionResponse": {
       "type": "object",
-      "required": ["run_id", "state", "status_url", "uploads"],
+      "required": [
+        "run_id",
+        "state",
+        "status_url",
+        "uploads"
+      ],
       "additionalProperties": false,
       "properties": {
-        "run_id": { "$ref": "common.schema.json#/$defs/runId" },
-        "state": { "type": "string", "enum": ["awaiting_upload", "queued", "duplicate"] },
-        "status_url": { "type": "string", "format": "uri" },
+        "run_id": {
+          "$ref": "common.schema.json#/$defs/runId"
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "awaiting_upload",
+            "queued",
+            "duplicate"
+          ]
+        },
+        "status_url": {
+          "type": "string",
+          "format": "uri"
+        },
         "uploads": {
           "type": "array",
           "description": "One slot per declared artifact not already present in the store. An artifact already stored under its hash is deduplicated and omitted.",
           "items": {
             "type": "object",
-            "required": ["name", "hash", "url", "expires_at"],
+            "required": [
+              "name",
+              "hash",
+              "url",
+              "expires_at"
+            ],
             "additionalProperties": false,
             "properties": {
-              "name": { "type": "string" },
-              "hash": { "$ref": "common.schema.json#/$defs/sha256" },
+              "name": {
+                "type": "string"
+              },
+              "hash": {
+                "$ref": "common.schema.json#/$defs/sha256"
+              },
               "url": {
                 "type": "string",
                 "format": "uri",
                 "description": "Single-use PUT target bound to this session, hash, exact byte size and media type. The Worker streams to R2 and verifies the hash while writing; a mismatch discards the object."
               },
-              "expires_at": { "type": "string", "format": "date-time" }
+              "expires_at": {
+                "type": "string",
+                "format": "date-time"
+              }
             }
           }
         }
       }
     },
-
     "completeSubmissionRequest": {
       "type": "object",
-      "required": ["nonce"],
+      "required": [
+        "nonce"
+      ],
       "additionalProperties": false,
       "properties": {
-        "nonce": { "type": "string", "pattern": "^[0-9a-f]{32}$" }
+        "nonce": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{32}$"
+        }
       }
     },
-
     "submissionStatus": {
       "type": "object",
-      "required": ["run_id", "state", "updated_at"],
+      "required": [
+        "run_id",
+        "state",
+        "updated_at"
+      ],
       "additionalProperties": false,
       "properties": {
-        "run_id": { "$ref": "common.schema.json#/$defs/runId" },
+        "run_id": {
+          "$ref": "common.schema.json#/$defs/runId"
+        },
         "state": {
           "type": "string",
-          "enum": ["awaiting_upload", "queued", "validating", "accepted", "rejected", "flagged"]
+          "enum": [
+            "awaiting_upload",
+            "queued",
+            "validating",
+            "accepted",
+            "rejected",
+            "flagged"
+          ]
         },
-        "verification": { "$ref": "common.schema.json#/$defs/verification" },
-        "updated_at": { "type": "string", "format": "date-time" },
-        "result_url": { "type": "string", "format": "uri" },
+        "verification": {
+          "$ref": "common.schema.json#/$defs/verification"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "result_url": {
+          "type": "string",
+          "format": "uri"
+        },
         "findings": {
           "type": "array",
           "items": {
             "type": "object",
-            "required": ["code", "severity", "message"],
+            "required": [
+              "code",
+              "severity",
+              "message"
+            ],
             "additionalProperties": false,
             "properties": {
-              "code": { "type": "string" },
-              "severity": { "type": "string", "enum": ["info", "warning", "error"] },
-              "message": { "type": "string" },
-              "field": { "type": "string" }
+              "code": {
+                "type": "string"
+              },
+              "severity": {
+                "type": "string",
+                "enum": [
+                  "info",
+                  "warning",
+                  "error"
+                ]
+              },
+              "message": {
+                "type": "string"
+              },
+              "field": {
+                "type": "string"
+              }
             }
           }
         }
       }
     },
-
     "errorResponse": {
       "type": "object",
-      "required": ["error", "message"],
+      "required": [
+        "error",
+        "message"
+      ],
       "additionalProperties": false,
       "properties": {
         "error": {
@@ -144,60 +258,196 @@
             "internal"
           ]
         },
-        "message": { "type": "string" },
-        "details": { "type": "array", "items": { "type": "string" } },
-        "retry_after_s": { "type": "integer", "minimum": 0 }
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": 0
+        }
       }
     },
-
     "resultSummary": {
       "type": "object",
       "description": "The denormalized row the website lists and ranks. Derived entirely from an accepted manifest.",
       "required": [
-        "run_id", "profile_id", "category", "tier", "lane", "verification",
-        "gpu_name", "gpu_count", "headline_metric", "headline_value", "headline_unit", "created_at"
+        "run_id",
+        "profile_id",
+        "category",
+        "tier",
+        "lane",
+        "verification",
+        "gpu_name",
+        "gpu_count",
+        "headline_metric",
+        "headline_value",
+        "headline_unit",
+        "created_at"
       ],
       "additionalProperties": true,
       "properties": {
-        "run_id": { "$ref": "common.schema.json#/$defs/runId" },
-        "profile_id": { "type": "string" },
-        "profile_version": { "type": "string" },
-        "category": { "$ref": "common.schema.json#/$defs/category" },
-        "tier": { "$ref": "common.schema.json#/$defs/tier" },
-        "lane": { "$ref": "common.schema.json#/$defs/lane" },
-        "verification": { "$ref": "common.schema.json#/$defs/verification" },
-        "ranked": { "type": "boolean" },
-        "gpu_name": { "type": "string" },
-        "gpu_key": { "type": "string" },
-        "gpu_count": { "type": "integer" },
-        "vram_bytes": { "type": "integer" },
-        "parallelism": { "$ref": "common.schema.json#/$defs/parallelism" },
-        "cpu_model": { "type": "string" },
-        "os": { "type": "string" },
-        "driver": { "type": "string" },
-        "runtime": { "type": "string" },
-        "runtime_version": { "type": "string" },
-        "headline_metric": { "type": "string" },
-        "headline_value": { "type": "number" },
-        "headline_unit": { "type": "string" },
-        "ttft_p50_ms": { "type": ["number", "null"] },
-        "ttft_p95_ms": { "type": ["number", "null"] },
-        "decode_tok_s": { "type": ["number", "null"] },
-        "prefill_tok_s": { "type": ["number", "null"] },
-        "seconds_per_step_s": { "type": ["number", "null"] },
-        "images_per_minute": { "type": ["number", "null"] },
-        "vram_peak_bytes": { "type": ["integer", "null"] },
-        "power_avg_w": { "type": ["number", "null"] },
-        "power_domain": { "$ref": "common.schema.json#/$defs/powerDomain" },
-        "efficiency": { "type": ["number", "null"] },
-        "alias": { "type": ["string", "null"] },
-        "system_name": { "type": ["string", "null"] },
-        "cooling": { "type": ["string", "null"] },
-        "tuning": { "type": ["string", "null"] },
-        "created_at": { "type": "string", "format": "date-time" },
+        "run_id": {
+          "$ref": "common.schema.json#/$defs/runId"
+        },
+        "profile_id": {
+          "type": "string"
+        },
+        "profile_version": {
+          "type": "string"
+        },
+        "category": {
+          "$ref": "common.schema.json#/$defs/category"
+        },
+        "tier": {
+          "$ref": "common.schema.json#/$defs/tier"
+        },
+        "lane": {
+          "$ref": "common.schema.json#/$defs/lane"
+        },
+        "verification": {
+          "$ref": "common.schema.json#/$defs/verification"
+        },
+        "ranked": {
+          "type": "boolean"
+        },
+        "gpu_name": {
+          "type": "string"
+        },
+        "gpu_key": {
+          "type": "string"
+        },
+        "gpu_count": {
+          "type": "integer"
+        },
+        "vram_bytes": {
+          "type": "integer"
+        },
+        "parallelism": {
+          "$ref": "common.schema.json#/$defs/parallelism"
+        },
+        "cpu_model": {
+          "type": "string"
+        },
+        "os": {
+          "type": "string"
+        },
+        "driver": {
+          "type": "string"
+        },
+        "runtime": {
+          "type": "string"
+        },
+        "runtime_version": {
+          "type": "string"
+        },
+        "headline_metric": {
+          "type": "string"
+        },
+        "headline_value": {
+          "type": "number"
+        },
+        "headline_unit": {
+          "type": "string"
+        },
+        "ttft_p50_ms": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "ttft_p95_ms": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "decode_tok_s": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "prefill_tok_s": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "seconds_per_step_s": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "images_per_minute": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "vram_peak_bytes": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "power_avg_w": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "power_domain": {
+          "$ref": "common.schema.json#/$defs/powerDomain"
+        },
+        "efficiency": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "system_name": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Generated label, e.g. Rocinante-K7X2P."
+        },
+        "cooling": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tuning": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
         "percentile": {
-          "type": ["number", "null"],
+          "type": [
+            "number",
+            "null"
+          ],
           "description": "Rank of this result within all ranked results for the same profile and GPU model."
+        },
+        "system_code": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Five-character code a contributor uses to find their own results."
         }
       }
     }
