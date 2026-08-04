@@ -43,10 +43,10 @@ const TIER_MODEL: Record<string, string> = {
   <section class="hero">
     <div class="wrap">
       <div class="eyebrow">Open benchmarks for local AI</div>
-      <h1>What can your hardware do?</h1>
+      <h1>Max out your GPU for local AI.</h1>
       <p class="lede">
-        The model, the precision, the workload and the container are fixed. Only your
-        hardware changes. The numbers compare.
+        The model, the quantization and the test workload are fixed. They are packaged into
+        the benchmark container. You tune your system for the local max.
       </p>
 
       <p class="scope">
@@ -80,8 +80,9 @@ const TIER_MODEL: Record<string, string> = {
       <div>
         <h2>Three tiers</h2>
         <p class="lede" style="margin-top:8px">
-          One model cannot span 12 GB to 192 GB. A tier is the VRAM its run must fill.
-          Each tier has its own model.
+          A small model runs on a large card, and often runs faster there. But it leaves most
+          of the hardware idle, so it does not compare hardware. Each tier uses a model that
+          fills the VRAM it names.
         </p>
       </div>
     </div>

@@ -38,7 +38,7 @@
     "repository": "black-forest-labs/FLUX.1-schnell",
     "revision": "PENDING",
     "precision": "fp8_e4m3",
-    "parameters_b": 12.0,
+    "parameters_b": 14.0,
     "weights_bytes": 14173392076,
     "license": "Apache-2.0",
     "files": []
